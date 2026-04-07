@@ -1,7 +1,6 @@
 package streaming.model;
 
 import java.util.List;
-import String;
 
 public abstract class Content extends Entity {
 
@@ -17,8 +16,18 @@ public abstract class Content extends Entity {
 
   public double totalviews;
 
-    public List<Genre> genre;
-    public List<StreamingDB> streamingDB;
+  private List<Artist> artists;
+  public  Content (String id, LocalDateTime createdAt, String title, int releaseYear, Genre genre, String region, double avgRating, double totalviews, List<Artist> artists){
+    super(id, createdAt);
+    this.title = title;
+    this.releaseYear = releaseYear;
+    this.genre = genre;
+    this.region = region;
+    this.avgRating = avgRating;
+    this.totalviews = totalviews;
+    this.artists = artists;
+  }
+
 
   public String getDetails() {
   return null;

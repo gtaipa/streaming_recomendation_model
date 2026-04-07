@@ -1,6 +1,8 @@
 package streaming.model;
 
 import java.util.List;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 
 
@@ -29,11 +31,11 @@ public User(String id, LocalDateTime createdAt, String username, String email) {
   public void follow(User u) {
   }
 
-  public List getFollowing() {
+  public List  <User> getFollowing() {
   return following;
   }
 
-  public List getPreferences() {
+  public List  <Genre> getPreferences() {
   return preferences;
   }
 

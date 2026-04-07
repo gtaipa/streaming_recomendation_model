@@ -100,8 +100,37 @@ public class StreamingDB {
         return results;
     }
 
-    public boolean validateConsistency() {
-        return false;
+public boolean validateConsistency() {
+        for  (String id : this.users.keys()) {
+            User currentUser = this.users.get(id);
+            
+            // 1ª Verificação: O utilizador não pode estar no arquivo
+            if (this.archivedusers.contains(id)) {
+                return false;
+            }
+
+            // 2ª Verificação: (Vamos fazer aqui a verificação da lista following)
+            if(currentUser.getFollowing() != null){
+                for(User followedUser : currentUser.getFollowing()){
+                    if(!this.users.contains(followedUser.getId())){
+                        return false;
+                    }
+                }
+            }
+      if(currentUser.getPreferences() != null){
+                for(Genre userGenre : currentUser.getPreferences()){
+                    // 1. Vamos à gaveta oficial buscar o molde original usando o ID
+                    Genre officialGenre = this.genres.get(userGenre.getId());
+                    
+                    // 2. Se a gaveta não tiver este género, ou se o objeto não for o mesmo...
+                    if(officialGenre == null || officialGenre != userGenre){
+                        return false;
+                    }
+                }
+            }
+            
+        }
+        return true;
     }
 
 }
