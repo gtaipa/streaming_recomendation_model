@@ -1,41 +1,64 @@
 package streaming.model;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.Period;
+import java.util.ArrayList;
 import java.util.List;
-import String;
 
 public class Artist extends Entity {
 
-  public String name;
+    private String name;
+    private String nationality;
+    private LocalDate birthDate;
+    private String gender;
 
-  public String nationality;
+    private List<ArtistRole> artistRoles;
+    private List<Movie> movies;
 
-  public Date birthDate;
+    public Artist(String id, LocalDateTime createdAt, String name, String nationality, LocalDate birthDate, String gender) {
+        super(id, createdAt);
+        this.name = name;
+        this.nationality = nationality;
+        this.birthDate = birthDate;
+        this.gender = gender;
+        this.artistRoles = new ArrayList<>();
+        this.movies = new ArrayList<>();
+    }
 
-  public String gender;
+    public String getName() {
+        return name;
+    }
 
-      public List<StreamingDB> streamingDB;
-    public List<StreamingDB> streamingDB;
-    public List<ArtistRole> artistRole;
-    public List<Movie> movie;
+    public String getNationality() {
+        return nationality;
+    }
 
-  public String getNationality() {
-  return null;
-  }
+    public LocalDate getBirthDate() {
+        return birthDate;
+    }
 
-  public LocalDate getBirthDate() {
-  return null;
-  }
+    public String getGender() {
+        return gender;
+    }
 
-  public String getGender() {
-  return null;
-  }
+    public int getAge() {
+        if (birthDate != null) {
+            return Period.between(birthDate, LocalDate.now()).getYears();
+        }
+        return 0;
+    }
 
-  public int getAge() {
-  return 0;
-  }
+    public List<ArtistRole> getArtistRoles() {
+        return artistRoles;
+    }
 
-  public String toString() {
-  return null;
-  }
+    public List<Movie> getMovies() {
+        return movies;
+    }
 
+    @Override
+    public String toString() {
+        return "Artist: " + name;
+    }
 }

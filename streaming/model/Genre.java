@@ -1,29 +1,21 @@
 package streaming.model;
 
-import java.util.List;
-import String;
+import java.time.LocalDateTime;
 
 public class Genre extends Entity {
+    private String name;
 
-  public String id;
+    public Genre(String id, LocalDateTime createdAt, String name) {
+        super(id, createdAt);
+        this.name = name;
+    }
 
-  public String name;
+    public String getName() {
+        return name;
+    }
 
-      public List<StreamingDB> streamingDB;
-    public List<StreamingDB> streamingDB;
-public class  {
-}public class  {
-}
-  public int getId() {
-  return 0;
-  }
-
-  public String getName() {
-  return null;
-  }
-
-  public String toString() {
-  return null;
-  }
-
+    @Override
+    public String toString() {
+        return "Genre: " + name;
+    }
 }

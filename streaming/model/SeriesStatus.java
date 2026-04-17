@@ -1,14 +1,11 @@
 package streaming.model;
 
-import String;
 
-public class SeriesStatus {
+public enum SeriesStatus {
 
-  public String ONGOING;
-
-  public String ENDED;
-
-  public Sting CANCELLED;
+ONGOING,
+ENDED,
+CANCELLED;
 
   
 }

@@ -1,33 +1,43 @@
 package streaming.model;
 
 import java.util.List;
-import String;
+import java.time.LocalDateTime;
+import java.util.ArrayList; 
 
 public class Series extends Content {
 
-  public int seasons;
+  private int seasons;
 
-  public episodes;
+  private List<Episode> episodes;
 
-  public SeriesStatus status;
+  private SeriesStatus status;
 
-    public List<Episode> episode;
-    public List<SeriesStatus> seriesStatus;
-    public List<Episode> episode;
+    public Series (String id, LocalDateTime createdAt, String title, int releaseYear, Genre genre, String region, int seasons, SeriesStatus status) {
+super(id, createdAt, title, releaseYear, genre, region, 0.0, 0, new ArrayList<>()); // 0.0 = rating, 0 = views, new ArrayList<>() = artists
+      this.seasons = seasons;
+      this.status = status;
+      this.episodes = new ArrayList<>();
+    }
 
   public int getSeasons() {
-  return 0;
+  return seasons;
   }
 
   public List getEpisodes() {
-  return null;
+  return episodes;
   }
 
   public void addEpisode(Episode e) {
+    for (Episode episode : episodes) {
+      if (episode.getEpisodeNumber() == e.getEpisodeNumber()) {
+        return;
+      }
+    }
+    episodes.add(e);
   }
 
   public String getContentType() {
-  return null;
+  return "Series";
   }
 
 }

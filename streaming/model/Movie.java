@@ -1,34 +1,53 @@
 package streaming.model;
 
 import java.util.List;
-import List<Artist>;
-import String;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+
 
 public class Movie extends Content {
 
-  public int duration;
+  private int duration;
 
-  public Artist director;
+  private Artist director;
 
-  public List<Artist> cast;
+  private List<Artist> cast;
 
-    public List<Artist> artist;
-    public List<Artist> artist;
+  public Movie(String id, LocalDateTime createdAt, String title, int releaseYear, Genre genre, String region,
+      int duration, Artist director) {
+super(id, createdAt, title, releaseYear, genre, region, 0.0, 0, new ArrayList<>()); // 0.0 = rating, 0 = views, new ArrayList<>() = artists
+    this.duration = duration;
+    this.director = director;
+    this.cast = new ArrayList<>();
+    
+
+  }
 
   public int getDuration() {
-  return 0;
+    return duration;
   }
 
   public Artist getDirector() {
-  return null;
+    return director;
   }
 
-  public List getCast() {
-  return null;
+  public List<Artist> getCast() {
+    return cast;
   }
 
   public String getContentType() {
-  return null;
+    return "Movie";
+  }
+
+
+
+  public void addCast(Artist artist) {
+    this.cast.add(artist);
+  }
+
+  @Override
+  public String toString() {
+    return "Movie: " + getTitle() + " (" + getReleaseYear() + ")";
   }
 
 }

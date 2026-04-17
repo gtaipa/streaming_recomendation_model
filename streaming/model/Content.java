@@ -1,23 +1,26 @@
 package streaming.model;
 
 import java.util.List;
+import java.time.LocalDateTime;
 
 public abstract class Content extends Entity {
 
-  public String title;
+  private String title;
 
-  public int releaseYear;
+  private int releaseYear;
 
-  public Genre genre;
+  private Genre genre;
 
-  public String region;
+  private String region;
 
-  public double avgRating;
+  private double avgRating;
 
-  public double totalviews;
+  private double totalviews;
 
   private List<Artist> artists;
-  public  Content (String id, LocalDateTime createdAt, String title, int releaseYear, Genre genre, String region, double avgRating, double totalviews, List<Artist> artists){
+
+  protected Content(String id, LocalDateTime createdAt, String title, int releaseYear, Genre genre, String region,
+      double avgRating, double totalviews, List<Artist> artists) {
     super(id, createdAt);
     this.title = title;
     this.releaseYear = releaseYear;
@@ -28,13 +31,41 @@ public abstract class Content extends Entity {
     this.artists = artists;
   }
 
+  public String getTitle() {
+    return title;
+  }
+
+  public int getReleaseYear() {
+    return releaseYear;
+  }
+
+  public Genre getGenre() {
+    return genre;
+  }
+
+  public String getRegion() {
+    return region;
+  }
+
+  public double getAvgRating() {
+    return avgRating;
+  }
+
+  public double getTotalviews() {
+    return totalviews;
+  }
+
+  public List<Artist> getArtists() {
+    return artists;
+  }
 
   public String getDetails() {
-  return null;
+
+    return null;
   }
 
   public String getContentType() {
-  return null;
+    return null;
   }
 
 }

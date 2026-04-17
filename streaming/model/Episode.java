@@ -1,38 +1,59 @@
 package streaming.model;
 
+import java.util.ArrayList;
 import java.util.List;
-import String;
+import java.time.LocalDateTime;
+
 
 public class Episode {
 
-  public int seasonNumber;
+  private int seasonNumber;
 
-  public int episodeNumber;
+  private int episodeNumber;
 
-  public String title;
+  private String title;
 
-  public int duration;
+  private int duration;
+  private float rating;
 
-      public List<Series> series;
+     
+      public Episode (int seasonNumber, int episodeNumber, String title, int duration, float rating) {
+        this.seasonNumber = seasonNumber;
+        this.episodeNumber = episodeNumber;
+        this.title = title;
+        this.duration = duration;
+        this.rating = rating;
+      }
 
   public int getSeasonNumber() {
-  return 0;
+  return seasonNumber;
   }
 
   public int getEpisodeNumber() {
-  return 0;
+  return episodeNumber;
   }
 
   public String getTitle() {
-  return null;
+  return title;
   }
 
   public int getDuration() {
-  return 0;
+  return duration;
   }
 
+  public float getRating() {
+  return rating;
+  }
+
+  public void setRating(float rating) {
+    if (rating < 0 || rating > 10) {
+      throw new IllegalArgumentException("Rating must be between 0 and 10");
+    }
+  this.rating = rating;
+  }
+@Override
   public String toString() {
-  return null;
+  return "Season"+seasonNumber+"Episode"+episodeNumber+"-"+title+"("+duration+"min)";
   }
 
 }

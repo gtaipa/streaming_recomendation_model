@@ -2,16 +2,14 @@ package streaming.model;
 
 import java.util.List;
 
-public class ArtistRole {
+public enum ArtistRole {
 
-  public ACTOR;
+  ACTOR,
 
-  public DIRECTOR;
+  DIRECTOR,
 
-  public NARRATOR;
+  NARRATOR,
 
-  public WRITER;
-
-    public List<Artist> artist;
+  WRITER;
 
 }

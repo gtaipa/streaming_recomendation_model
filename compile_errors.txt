@@ -1,0 +1,82 @@
+streaming\model\Artist.java:4: error: '.' expected
+import String;
+             ^
+streaming\model\ArtistRole.java:7: error: <identifier> expected
+  public ACTOR;
+              ^
+streaming\model\ArtistRole.java:9: error: <identifier> expected
+  public DIRECTOR;
+                 ^
+streaming\model\ArtistRole.java:11: error: <identifier> expected
+  public NARRATOR;
+                 ^
+streaming\model\ArtistRole.java:13: error: <identifier> expected
+  public WRITER;
+               ^
+streaming\model\Documentary.java:3: error: '.' expected
+import String;
+             ^
+streaming\model\Episode.java:4: error: '.' expected
+import String;
+             ^
+streaming\model\Genre.java:4: error: '.' expected
+import String;
+             ^
+streaming\model\Genre.java:14: error: <identifier> expected
+public class  {
+            ^
+streaming\model\Genre.java:15: error: <identifier> expected
+}public class  {
+             ^
+streaming\model\Interaction.java:4: error: '.' expected
+import String;
+             ^
+streaming\model\InteractionType.java:7: error: <identifier> expected
+  public WATCH;
+              ^
+streaming\model\InteractionType.java:9: error: <identifier> expected
+  public RATE;
+             ^
+streaming\model\InteractionType.java:11: error: <identifier> expected
+  public CLICK;
+              ^
+streaming\model\InteractionType.java:13: error: <identifier> expected
+  public FOLLOW;
+               ^
+streaming\model\Movie.java:4: error: '.' expected
+import List<Artist>;
+           ^
+streaming\model\Movie.java:5: error: '.' expected
+import String;
+             ^
+streaming\model\Series.java:4: error: '.' expected
+import String;
+             ^
+streaming\model\Series.java:10: error: <identifier> expected
+  public episodes;
+                 ^
+streaming\model\SeriesStatus.java:3: error: '.' expected
+import String;
+             ^
+streaming\db\StreamingGraph.java:7: error: <identifier> expected
+import streaming.model.void;
+                       ^
+streaming\db\StreamingGraph.java:8: error: '.' expected
+import HashMap;
+              ^
+streaming\db\StreamingGraph.java:10: error: <identifier> expected
+import streaming.model.boolean;
+                       ^
+streaming\db\StreamingGraph.java:11: error: '.' expected
+import String;
+             ^
+streaming\core\FileManager.java:4: error: <identifier> expected
+import streaming.model.void;
+                       ^
+streaming\core\FileManager.java:5: error: '.' expected
+import String;
+             ^
+streaming\core\StreamingApp.java:4: error: <identifier> expected
+import streaming.model.void;
+                       ^
+27 errors
