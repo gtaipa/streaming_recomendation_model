@@ -7,7 +7,6 @@ import streaming.model.Entity;
 import streaming.model.Interaction;
 import streaming.model.InteractionType;
 import streaming.model.User;
-import streaming.model.Content;
 
 import java.util.ArrayList;
 import java.util.HashMap;
