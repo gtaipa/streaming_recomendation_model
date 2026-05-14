@@ -104,5 +104,4 @@ public abstract class Content extends Entity {
    * @return tipo do conteudo
    */
   public abstract String getContentType();
-
 }

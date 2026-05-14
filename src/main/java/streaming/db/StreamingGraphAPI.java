@@ -1,6 +1,7 @@
 package streaming.db;
 
 import edu.princeton.cs.algs4.DirectedEdge;
+import edu.princeton.cs.algs4.DijkstraSP;
 
 import streaming.model.Artist;
 import streaming.model.Content;
