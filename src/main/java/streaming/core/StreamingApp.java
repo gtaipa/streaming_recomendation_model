@@ -26,7 +26,7 @@ public class StreamingApp {
 
         // 3. Testar Pesquisa por Género (R3 - Red-Black BST)
         List<Content> listaAcao = db.searchByGenre(acao.getName());
-        System.out.println("Encontrados " + listaAcao.size() + " filmes de Ação."); 
+        System.out.println("Encontrados " + listaAcao.size() + " filmes de Ação.");
         // Deve imprimir 2
 
         // 4. Testar Remoção e Consistência (Limpeza dos índices)

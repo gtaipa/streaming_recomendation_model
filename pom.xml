@@ -87,7 +87,7 @@
                         <id>default-cli</id>
                         <configuration>
                             <mainClass>
-                                org.example.proj_lp2_aed2_stream/org.example.proj_lp2_aed2_stream.HelloApplication
+                                org.example.proj_lp2_aed2_stream/streaming.core.StreamingGUI
                             </mainClass>
                             <launcher>app</launcher>
                             <jlinkZipName>app</jlinkZipName>

@@ -136,7 +136,30 @@ public class GraphAlgorithms {
 
     /** R8b) Caminho mais curto entre dois artistas via conteúdos partilhados. */
     public List<Entity> shortestPathBetweenArtists(String artistId1, String artistId2) {
-        return dijkstraPath(graph.getGraph(), artistId1, artistId2);
+        if (!graph.containsVertex(artistId1) || !graph.containsVertex(artistId2))
+            return new ArrayList<>();
+
+        // Enunciado: via conteudos onde participaram.
+        // Construir subgrafo bipartido Artist <-> Content e tratar ligacoes como nao-direcionadas
+        // para permitir Artist -> Content -> Artist.
+        EdgeWeightedDigraph temp = new EdgeWeightedDigraph(graph.getGraph().V());
+        for (int v = 0; v < graph.getGraph().V(); v++) {
+            Entity from = graph.getEntityByIndex(v);
+            if (from == null) continue;
+            for (DirectedEdge e : graph.getGraph().adj(v)) {
+                Entity to = graph.getEntityByIndex(e.to());
+                if (to == null) continue;
+
+                boolean artistToContent = (from instanceof Artist) && (to instanceof Content);
+                boolean contentToArtist = (from instanceof Content) && (to instanceof Artist);
+                if (!artistToContent && !contentToArtist) continue;
+
+                temp.addEdge(new DirectedEdge(e.from(), e.to(), e.weight()));
+                temp.addEdge(new DirectedEdge(e.to(), e.from(), e.weight()));
+            }
+        }
+
+        return dijkstraPath(temp, artistId1, artistId2);
     }
 
     // ========================= R8c) CONECTIVIDADE =========================
@@ -150,6 +173,7 @@ public class GraphAlgorithms {
     public boolean isConnected(StreamingGraph subgraph) {
         if (subgraph.vertexCount() <= 1) return true;
         Map<Integer, Entity> entities = subgraph.getIndexToEntity();
+        if (entities.isEmpty()) return true;
         // Criar dígrafo bidirecional (ignorar direções = conectividade fraca)
         Digraph undirected = new Digraph(subgraph.getGraph().V());
         for (int v = 0; v < subgraph.getGraph().V(); v++) {

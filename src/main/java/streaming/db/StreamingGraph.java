@@ -166,6 +166,27 @@ public class StreamingGraph {
     return new ArrayList<>(interactions);
   }
 
+  /**
+   * Devolve uma cópia do mapa interno índice -> entidade.
+   * Útil para algoritmos (ex: BFS) sem expor o estado mutável do grafo.
+   */
+  public Map<Integer, Entity> getIndexToEntity() {
+    return new HashMap<>(indexToEntity);
+  }
+
+  /**
+   * Devolve uma lista com as interações filtradas por tipo.
+   * Mantém a lógica de filtragem encapsulada no grafo.
+   */
+  public List<Interaction> getInteractionsByType(InteractionType type) {
+    List<Interaction> result = new ArrayList<>();
+    if (type == null) return result;
+    for (Interaction i : interactions) {
+      if (i != null && i.getType() == type) result.add(i);
+    }
+    return result;
+  }
+
   public List<String> getAllVertexIds() {
     return new ArrayList<>(nodeIndex.keySet());
   }
