@@ -247,7 +247,7 @@ public final class Phase2StaticTests {
         check("R10: U1 region Porto", "Porto".equals(db2.getUser("U1").getRegion()));
         check("R10: Grafo vertices", graph2.vertexCount() > 0);
         check("R10: Grafo arestas", graph2.edgeCount() > 0);
-        check("R10: 2 interacoes", graph2.getInteractions().size() == 2);
+        check("R10: 3 interacoes", graph2.getInteractions().size() == 3);
         check("R10: U1 follow U2", db2.getUser("U1").getFollowing().size() == 1);
     }
 
@@ -281,7 +281,7 @@ public final class Phase2StaticTests {
         check("R11: U1 region Porto", "Porto".equals(db2.getUser("U1").getRegion()));
         check("R11: Grafo vertices", graph2.vertexCount() > 0);
         check("R11: Grafo arestas", graph2.edgeCount() > 0);
-        check("R11: 2 interacoes", graph2.getInteractions().size() == 2);
+        check("R11: 3 interacoes", graph2.getInteractions().size() == 3);
         check("R11: U1 follow U2", db2.getUser("U1").getFollowing().size() == 1);
     }
 
@@ -310,16 +310,14 @@ public final class Phase2StaticTests {
         s1.addEpisode(new Episode(1, 2, "Cat in the Bag", 48, 8.5f));
         db.addContent(s1);
 
-        User u1 = new User("U1", "João", "joao@email.com");
-        u1.setRegion("PT"); // <-- A magia
-        u1.setRegistrationDate(LocalDateTime.now()); // <-- A magia
+        User u1 = new User("U1", LocalDateTime.now(), "joao", "joao@email.com", "h");
+        u1.setRegion("Porto");
+        u1.setRegistrationDate(LocalDate.of(2024, 1, 15));
         db.addUser(u1);
 
-
-
-        User u2 = new User("U2", "Maria", "maria@email.com");
-        u2.setRegion("BR");
-        u2.setRegistrationDate(LocalDateTime.now());
+        User u2 = new User("U2", LocalDateTime.now(), "maria", "maria@email.com", "h");
+        u2.setRegion("Lisboa");
+        u2.setRegistrationDate(LocalDate.of(2024, 3, 20));
         db.addUser(u2);
 
         api.registerAllEntities();
