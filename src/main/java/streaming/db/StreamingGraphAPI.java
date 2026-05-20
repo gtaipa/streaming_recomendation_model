@@ -47,9 +47,8 @@ import java.util.List;
  */
 public class StreamingGraphAPI {
 
-    // =====================================================
     // ATRIBUTOS
-    // =====================================================
+
 
     /**
      * Referência à base de dados (Fase 1).
@@ -276,10 +275,14 @@ public class StreamingGraphAPI {
         if (followerId.equals(followedId)) return false;  // não pode seguir a si próprio
 
         // Adicionar no grafo
-        graph.addFollow(follower, followed);
+        // (FOLLOW passa a ser registado como Interaction, ver abaixo)
 
         // Também atualizar a lista de following no User (consistência com Fase 1)
         follower.follow(followed);
+
+        // Guardar como Interaction do tipo FOLLOW (para ficar visivel em graph.getInteractions())
+        Interaction interaction = new Interaction(follower, followed, LocalDateTime.now(), 1.0);
+        graph.addEdge(interaction);
 
         return true;
     }
@@ -524,7 +527,7 @@ public class StreamingGraphAPI {
         if (contentId == null) return result;
 
         for (Interaction i : graph.getInteractions()) {
-            if (contentId.equals(i.getContent().getId())) {
+            if (i.getContent() != null && contentId.equals(i.getContent().getId())) {
                 result.add(i);
             }
         }

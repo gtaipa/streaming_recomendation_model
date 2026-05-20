@@ -13,6 +13,8 @@ public class Interaction {
   private User user;
   /** Conteudo associado a interacao. */
   private Content content;
+  /** Utilizador alvo (apenas para interacoes do tipo FOLLOW). */
+  private User targetUser;
   /** Tipo de interacao. */
   private InteractionType type;
   /** Momento em que ocorreu a interacao. */
@@ -39,10 +41,30 @@ public class Interaction {
   public Interaction(User user, Content content, InteractionType type, LocalDateTime timestamp, double watchedPct, double rating, double weight) {
     this.user = user;
     this.content = content;
+    this.targetUser = null;
     this.type = type;
     this.timestamp = timestamp;
     this.watchedPct = watchedPct;
     this.rating = rating;
+    this.weight = weight;
+  }
+
+  /**
+   * Cria uma interacao de FOLLOW entre utilizadores.
+   *
+   * @param from utilizador que segue
+   * @param to utilizador seguido
+   * @param timestamp instante da interacao
+   * @param weight peso da interacao (tipicamente 1.0)
+   */
+  public Interaction(User from, User to, LocalDateTime timestamp, double weight) {
+    this.user = from;
+    this.content = null;
+    this.targetUser = to;
+    this.type = InteractionType.FOLLOW;
+    this.timestamp = timestamp;
+    this.watchedPct = 0.0;
+    this.rating = 0.0;
     this.weight = weight;
   }
 
@@ -61,7 +83,11 @@ public class Interaction {
   /** @return representacao textual resumida da interacao */
   @Override
   public String toString() {
-    return "Interaction [" + type + "] - User: " + user.getId() + " | Content: " + content.getId() + " | Weight: " + weight;
+    String target;
+    if (content != null) target = "Content: " + content.getId();
+    else if (targetUser != null) target = "User: " + targetUser.getId();
+    else target = "Target: null";
+    return "Interaction [" + type + "] - User: " + (user == null ? "null" : user.getId()) + " | " + target + " | Weight: " + weight;
   }
 
   // --- Getters e Setters extra (Essenciais para depois usares no Grafo) ---
@@ -74,6 +100,21 @@ public class Interaction {
   /** @return conteudo */
   public Content getContent() {
     return content;
+  }
+
+  /** @return utilizador seguido (apenas em FOLLOW); pode ser null noutros tipos */
+  public User getTargetUser() {
+    return targetUser;
+  }
+
+  /**
+   * Entidade alvo da interacao:
+   * - WATCH/RATE/CLICK: o {@link Content}
+   * - FOLLOW: o utilizador seguido
+   */
+  public Entity getTargetEntity() {
+    if (content != null) return content;
+    return targetUser;
   }
 
   /** @return tipo de interacao */

@@ -67,8 +67,10 @@ public class StreamingGraph {
     indexToEntity.remove(idx);
 
     interactions.removeIf(inter -> {
+      if (inter == null || inter.getUser() == null) return false;
       String fromId = inter.getUser().getId();
-      String toId = inter.getContent().getId();
+      Entity target = inter.getTargetEntity();
+      String toId = target == null ? null : target.getId();
       return entityId.equals(fromId) || entityId.equals(toId);
     });
     genericEdges.removeIf(ge -> entityId.equals(ge.fromId) || entityId.equals(ge.toId));
@@ -79,13 +81,15 @@ public class StreamingGraph {
 
   public void addEdge(Interaction interaction) {
     if (interaction == null) return;
-    if (interaction.getUser() == null || interaction.getContent() == null) return;
+    if (interaction.getUser() == null) return;
+    Entity target = interaction.getTargetEntity();
+    if (target == null) return;
 
     addVertex(interaction.getUser());
-    addVertex(interaction.getContent());
+    addVertex(target);
 
     int from = nodeIndex.get(interaction.getUser().getId());
-    int to = nodeIndex.get(interaction.getContent().getId());
+    int to = nodeIndex.get(target.getId());
 
     DirectedEdge edge = new DirectedEdge(from, to, interaction.getWeight());
     graph.addEdge(edge);
@@ -215,8 +219,11 @@ public class StreamingGraph {
     }
 
     for (Interaction inter : interactions) {
+      if (inter == null || inter.getUser() == null) continue;
+      Entity target = inter.getTargetEntity();
+      if (target == null) continue;
       String fromId = inter.getUser().getId();
-      String toId = inter.getContent().getId();
+      String toId = target.getId();
       if (nodeIndex.containsKey(fromId) && nodeIndex.containsKey(toId)) {
         int from = nodeIndex.get(fromId);
         int to = nodeIndex.get(toId);

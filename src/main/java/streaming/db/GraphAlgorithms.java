@@ -67,7 +67,9 @@ public class GraphAlgorithms {
         for (Interaction i : graph.getInteractions()) {
             if (i.getType() != type) continue;
             String fId = i.getUser().getId();
-            String tId = i.getContent().getId();
+            Entity target = i.getTargetEntity();
+            if (target == null) continue;
+            String tId = target.getId();
             if (graph.containsVertex(fId) && graph.containsVertex(tId))
                 temp.addEdge(new DirectedEdge(graph.getIndex(fId), graph.getIndex(tId), i.getWeight()));
         }
