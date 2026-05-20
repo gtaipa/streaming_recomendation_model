@@ -14,80 +14,49 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Base de dados em memoria para a plataforma de streaming.
+ * In-memory database engine for the streaming platform.
  * <p>
- * Estruturas principais:
- * <ul>
- *   <li>{@code SeparateChainingHashST} para acesso por {@code id} (O(1) medio).</li>
- *   <li>{@code RedBlackBST} como indices ordenados para pesquisa por chaves (O(log n)).</li>
- * </ul>
- * Para suportar updates sem varrer indices, guarda-se um "snapshot" das chaves usadas na indexacao
- * (ex.: regiao, data, genero, titulo) e faz-se deindexacao + reindexacao em updates.
+ * Manages core entities (Users, Content, Artists, Genres) using hash tables for O(1) access
+ * and Red-Black BSTs for optimized O(log N) indexed searches.
  */
 public class StreamingDB {
 
-    // Armazenamento Principal (R2)
+    /** Primary hash table for active users. */
     private SeparateChainingHashST<String, User> users;
+    /** Hash table for archived users. */
     private SeparateChainingHashST<String, User> archivedusers;
+    /** Primary hash table for contents. */
     private SeparateChainingHashST<String, Content> contents;
+    /** Primary hash table for artists. */
     private SeparateChainingHashST<String, Artist> artists;
+    /** Primary hash table for genres. */
     private SeparateChainingHashST<String, Genre> genres;
 
-    // Snapshots das chaves de indexação (evita varrer BSTs quando há updates in-place)
-    private SeparateChainingHashST<String, UserIndexKeys> userIndexKeys;
-    private SeparateChainingHashST<String, ArtistIndexKeys> artistIndexKeys;
-    private SeparateChainingHashST<String, ContentIndexKeys> contentIndexKeys;
-
-    // Índices Ordenados (R3) - Usamos List para permitir múltiplas entidades por
-    // chave
+    /** BST index for users by region. */
     private RedBlackBST<String, List<User>> usersByRegion;
+    /** BST index for users by registration date. */
     private RedBlackBST<ChronoLocalDate, List<User>> usersByRegistrationDate;
+    /** BST index for content by genre name. */
     private RedBlackBST<String, List<Content>> contentsByGenre;
+    /** BST index for content by title. */
     private RedBlackBST<String, List<Content>> contentsByTitle;
+    /** BST index for content by region. */
     private RedBlackBST<String, List<Content>> contentsByRegion;
+    /** BST index for artists by nationality. */
     private RedBlackBST<String, List<Artist>> artistsByNationality;
+    /** BST index for artists by birth date. */
     private RedBlackBST<ChronoLocalDate, List<Artist>> artistsByBirthDate;
+    /** BST index for content by release year. */
     private RedBlackBST<Integer, List<Content>> contentsByReleaseYear;
+    /** BST index for content by rating. */
     private RedBlackBST<Double, List<Content>> contentsByRating;
+    /** BST index for content by views. */
     private RedBlackBST<Integer, List<Content>> contentsByViews;
+    /** BST index for content by duration. */
     private RedBlackBST<Integer, List<Content>> contentsByDuration;
 
-    private static final class UserIndexKeys {
-        final String region;
-        final ChronoLocalDate registrationDate;
-
-        private UserIndexKeys(String region, ChronoLocalDate registrationDate) {
-            this.region = region;
-            this.registrationDate = registrationDate;
-        }
-    }
-
-    private static final class ArtistIndexKeys {
-        final String nationality;
-        final ChronoLocalDate birthDate;
-
-        private ArtistIndexKeys(String nationality, ChronoLocalDate birthDate) {
-            this.nationality = nationality;
-            this.birthDate = birthDate;
-        }
-    }
-
-    private static final class ContentIndexKeys {
-        final int releaseYear;
-        String genreName;
-        final String title;
-        final String region;
-
-        private ContentIndexKeys(int releaseYear, String genreName, String title, String region) {
-            this.releaseYear = releaseYear;
-            this.genreName = genreName;
-            this.title = title;
-            this.region = region;
-        }
-    }
-
     /**
-     * Cria uma DB vazia com todas as estruturas e indices inicializados.
+     * Initializes a new database with all storage and indexing structures.
      */
     public StreamingDB() {
         this.users = new SeparateChainingHashST<>();
@@ -95,10 +64,6 @@ public class StreamingDB {
         this.artists = new SeparateChainingHashST<>();
         this.genres = new SeparateChainingHashST<>();
         this.archivedusers = new SeparateChainingHashST<>();
-
-        this.userIndexKeys = new SeparateChainingHashST<>();
-        this.artistIndexKeys = new SeparateChainingHashST<>();
-        this.contentIndexKeys = new SeparateChainingHashST<>();
 
         this.usersByRegion = new RedBlackBST<>();
         this.usersByRegistrationDate = new RedBlackBST<>();
@@ -114,96 +79,215 @@ public class StreamingDB {
     }
 
     /**
-     * Adiciona um utilizador a DB (ou substitui o existente com o mesmo {@code id}).
-     * <p>
-     * Complexidade: O(1) medio para hash + O(log n) para atualizar indices.
-     *
-     * @param u utilizador a adicionar
+     * Adds a user to the database. If the ID exists, the old user is deindexed and replaced.
+     * @param newUser the user to add
      */
-    public void addUser(User u) {
-        if (u == null || u.getId() == null) return;
+    public void addUser(User newUser) {
+        if (newUser == null || newUser.getId() == null) return;
 
-        if (this.users.contains(u.getId())) {
-
-            String id = u.getId();
-            UserIndexKeys prevKeys = this.userIndexKeys.get(id);
-            if (prevKeys != null) {
-                deindexUserByKeys(id, prevKeys);
-            } else {
-                // Fallback for inconsistent state.
-                purgeUserFromIndices(id);
-            }
-            this.userIndexKeys.delete(id);
+        // if the user already exists, remove the old entry from all BST indices first
+        if (users.contains(newUser.getId())) {
+            User oldUser = users.get(newUser.getId());
+            removeUserFromIndices(oldUser);
         }
-        this.users.put(u.getId(), u);
-        indexUser(u);
+
+        users.put(newUser.getId(), newUser);
+        addUserToIndices(newUser);
     }
 
     /**
-     * Adiciona um conteudo a DB (ou substitui o existente com o mesmo {@code id}).
-     * <p>
-     * Complexidade: O(1) medio para hash + O(log n) para atualizar indices.
-     *
-     * @param c conteudo a adicionar
+     * Adds content to the database. If the ID exists, the old content is deindexed and replaced.
+     * @param newContent the content to add
      */
-    public void addContent(Content c) {
-        if (c == null || c.getId() == null) return;
+    public void addContent(Content newContent) {
+        if (newContent == null || newContent.getId() == null) return;
 
-        if (this.contents.contains(c.getId())) {
-            String id = c.getId();
-            ContentIndexKeys prevKeys = this.contentIndexKeys.get(id);
-            if (prevKeys != null) {
-                deindexContentByKeys(id, prevKeys);
-            } else {
-                purgeContentFromIndices(id);
-            }
-            this.contentIndexKeys.delete(id);
+        if (contents.contains(newContent.getId())) {
+            Content oldContent = contents.get(newContent.getId());
+            removeContentFromIndices(oldContent);
         }
-        this.contents.put(c.getId(), c);
-        indexContent(c);
+
+        contents.put(newContent.getId(), newContent);
+        addContentToIndices(newContent);
     }
 
     /**
-     * Adiciona um artista a DB (ou substitui o existente com o mesmo {@code id}).
-     *
-     * @param a artista a adicionar
+     * Adds an artist to the database. If the ID exists, the old artist is deindexed and replaced.
+     * @param newArtist the artist to add
      */
-    public void addArtist(Artist a) {
-        if (a == null || a.getId() == null) return;
+    public void addArtist(Artist newArtist) {
+        if (newArtist == null || newArtist.getId() == null) return;
 
-        if (this.artists.contains(a.getId())) {
-            String id = a.getId();
-            ArtistIndexKeys prevKeys = this.artistIndexKeys.get(id);
-            if (prevKeys != null) {
-                deindexArtistByKeys(id, prevKeys);
-            } else {
-                purgeArtistFromIndices(id);
-            }
-            this.artistIndexKeys.delete(id);
+        if (artists.contains(newArtist.getId())) {
+            Artist oldArtist = artists.get(newArtist.getId());
+            removeArtistFromIndices(oldArtist);
         }
-        this.artists.put(a.getId(), a);
-        indexArtist(a);
+
+        artists.put(newArtist.getId(), newArtist);
+        addArtistToIndices(newArtist);
     }
 
     /**
-     * Adiciona um genero a DB (ou substitui o existente com o mesmo {@code id}).
-     *
-     * @param g genero a adicionar
+     * Internal helper to add a user to all relevant BST indices.
+     */
+    private void addUserToIndices(User user) {
+        if (user == null) return;
+
+        String region = user.getRegion();
+        if (region != null) {
+            if (!usersByRegion.contains(region)) usersByRegion.put(region, new ArrayList<>());
+            usersByRegion.get(region).add(user);
+        }
+
+        LocalDate regDate = user.getRegistrationDate();
+        if (regDate != null) {
+            if (!usersByRegistrationDate.contains(regDate)) usersByRegistrationDate.put(regDate, new ArrayList<>());
+            usersByRegistrationDate.get(regDate).add(user);
+        }
+    }
+
+    /**
+     * Internal helper to remove a user from all BST indices using its current field values.
+     */
+    private void removeUserFromIndices(User user) {
+        if (user == null) return;
+
+        String region = user.getRegion();
+        if (region != null && usersByRegion.contains(region)) {
+            List<User> list = usersByRegion.get(region);
+            list.removeIf(u -> u.getId().equals(user.getId()));
+            if (list.isEmpty()) usersByRegion.delete(region);
+        }
+
+        LocalDate regDate = user.getRegistrationDate();
+        if (regDate != null && usersByRegistrationDate.contains(regDate)) {
+            List<User> list = usersByRegistrationDate.get(regDate);
+            list.removeIf(u -> u.getId().equals(user.getId()));
+            if (list.isEmpty()) usersByRegistrationDate.delete(regDate);
+        }
+    }
+
+    /**
+     * Internal helper to add content to all relevant BST indices.
+     */
+    private void addContentToIndices(Content content) {
+        if (content == null) return;
+
+        int year = content.getReleaseYear();
+        if (!contentsByReleaseYear.contains(year)) contentsByReleaseYear.put(year, new ArrayList<>());
+        contentsByReleaseYear.get(year).add(content);
+
+        Genre genre = content.getGenre();
+        if (genre != null && genre.getName() != null) {
+            String gName = genre.getName();
+            if (!contentsByGenre.contains(gName)) contentsByGenre.put(gName, new ArrayList<>());
+            contentsByGenre.get(gName).add(content);
+        }
+
+        String title = content.getTitle();
+        if (title != null) {
+            if (!contentsByTitle.contains(title)) contentsByTitle.put(title, new ArrayList<>());
+            contentsByTitle.get(title).add(content);
+        }
+
+        String region = content.getRegion();
+        if (region != null) {
+            if (!contentsByRegion.contains(region)) contentsByRegion.put(region, new ArrayList<>());
+            contentsByRegion.get(region).add(content);
+        }
+    }
+
+    /**
+     * Internal helper to remove content from all BST indices using its current field values.
+     */
+    private void removeContentFromIndices(Content content) {
+        if (content == null) return;
+
+        int year = content.getReleaseYear();
+        if (contentsByReleaseYear.contains(year)) {
+            List<Content> list = contentsByReleaseYear.get(year);
+            list.removeIf(c -> c.getId().equals(content.getId()));
+            if (list.isEmpty()) contentsByReleaseYear.delete(year);
+        }
+
+        Genre genre = content.getGenre();
+        if (genre != null && genre.getName() != null) {
+            String gName = genre.getName();
+            if (contentsByGenre.contains(gName)) {
+                List<Content> list = contentsByGenre.get(gName);
+                list.removeIf(c -> c.getId().equals(content.getId()));
+                if (list.isEmpty()) contentsByGenre.delete(gName);
+            }
+        }
+
+        String title = content.getTitle();
+        if (title != null && contentsByTitle.contains(title)) {
+            List<Content> list = contentsByTitle.get(title);
+            list.removeIf(c -> c.getId().equals(content.getId()));
+            if (list.isEmpty()) contentsByTitle.delete(title);
+        }
+
+        String region = content.getRegion();
+        if (region != null && contentsByRegion.contains(region)) {
+            List<Content> list = contentsByRegion.get(region);
+            list.removeIf(c -> c.getId().equals(content.getId()));
+            if (list.isEmpty()) contentsByRegion.delete(region);
+        }
+    }
+
+    /**
+     * Internal helper to add an artist to all relevant BST indices.
+     */
+    private void addArtistToIndices(Artist artist) {
+        if (artist == null) return;
+
+        String nationality = artist.getNationality();
+        if (nationality != null) {
+            if (!artistsByNationality.contains(nationality)) artistsByNationality.put(nationality, new ArrayList<>());
+            artistsByNationality.get(nationality).add(artist);
+        }
+
+        LocalDate birthDate = artist.getBirthDate();
+        if (birthDate != null) {
+            if (!artistsByBirthDate.contains(birthDate)) artistsByBirthDate.put(birthDate, new ArrayList<>());
+            artistsByBirthDate.get(birthDate).add(artist);
+        }
+    }
+
+    /**
+     * Internal helper to remove an artist from all BST indices using its current field values.
+     */
+    private void removeArtistFromIndices(Artist artist) {
+        if (artist == null) return;
+
+        String nationality = artist.getNationality();
+        if (nationality != null && artistsByNationality.contains(nationality)) {
+            List<Artist> list = artistsByNationality.get(nationality);
+            list.removeIf(a -> a.getId().equals(artist.getId()));
+            if (list.isEmpty()) artistsByNationality.delete(nationality);
+        }
+
+        LocalDate birthDate = artist.getBirthDate();
+        if (birthDate != null && artistsByBirthDate.contains(birthDate)) {
+            List<Artist> list = artistsByBirthDate.get(birthDate);
+            list.removeIf(a -> a.getId().equals(artist.getId()));
+            if (list.isEmpty()) artistsByBirthDate.delete(birthDate);
+        }
+    }
+
+    /**
+     * Adds a genre to the database.
+     * @param g the genre to add
      */
     public void addGenre(Genre g) {
         if (g == null || g.getId() == null) return;
         this.genres.put(g.getId(), g);
     }
 
-    // ---------------------------
-    // GET / LIST (R2)
-    // ---------------------------
-
     /**
-     * Procura um utilizador pelo {@code id}.
-     *
-     * @param userId id do utilizador
-     * @return utilizador ou {@code null} se nao existir
+     * Retrieves a user by ID.
+     * @param userId user ID
+     * @return the user or null
      */
     public User getUser(String userId) {
         if (userId == null) return null;
@@ -211,10 +295,9 @@ public class StreamingDB {
     }
 
     /**
-     * Procura um conteudo pelo {@code id}.
-     *
-     * @param contentId id do conteudo
-     * @return conteudo ou {@code null} se nao existir
+     * Retrieves content by ID.
+     * @param contentId content ID
+     * @return the content or null
      */
     public Content getContent(String contentId) {
         if (contentId == null) return null;
@@ -222,10 +305,9 @@ public class StreamingDB {
     }
 
     /**
-     * Procura um artista pelo {@code id}.
-     *
-     * @param artistId id do artista
-     * @return artista ou {@code null} se nao existir
+     * Retrieves an artist by ID.
+     * @param artistId artist ID
+     * @return the artist or null
      */
     public Artist getArtist(String artistId) {
         if (artistId == null) return null;
@@ -233,21 +315,29 @@ public class StreamingDB {
     }
 
     /**
-     * Procura um genero pelo {@code id}.
-     *
-     * @param genreId id do genero
-     * @return genero ou {@code null} se nao existir
+     * Retrieves a genre by ID.
+     * @param genreId genre ID
+     * @return the genre or null
      */
     public Genre getGenre(String genreId) {
         if (genreId == null) return null;
         return this.genres.get(genreId);
     }
 
+    /**
+     * Retrieves an archived user by ID.
+     * @param userId user ID
+     * @return the user or null
+     */
     public User getArchivedUser(String userId) {
         if (userId == null) return null;
         return this.archivedusers.get(userId);
     }
 
+    /**
+     * Lists all active users.
+     * @return list of active users
+     */
     public List<User> listUsers() {
         List<User> out = new ArrayList<>();
         for (String id : this.users.keys()) {
@@ -257,6 +347,10 @@ public class StreamingDB {
         return out;
     }
 
+    /**
+     * Lists all archived users.
+     * @return list of archived users
+     */
     public List<User> listArchivedUsers() {
         List<User> out = new ArrayList<>();
         for (String id : this.archivedusers.keys()) {
@@ -266,6 +360,11 @@ public class StreamingDB {
         return out;
     }
 
+    /**
+     * Updates an archived user in storage.
+     * @param u the user to update
+     * @return true if updated
+     */
     public boolean updateArchivedUser(User u) {
         if (u == null || u.getId() == null) return false;
         if (!this.archivedusers.contains(u.getId())) return false;
@@ -273,6 +372,11 @@ public class StreamingDB {
         return true;
     }
 
+    /**
+     * Permanently removes a user from the archive.
+     * @param userId user ID
+     * @return true if removed
+     */
     public boolean removeArchivedUser(String userId) {
         if (userId == null) return false;
         if (!this.archivedusers.contains(userId)) return false;
@@ -280,6 +384,11 @@ public class StreamingDB {
         return true;
     }
 
+    /**
+     * Restores a user from archive back to active storage.
+     * @param userId user ID
+     * @return true if restored
+     */
     public boolean restoreArchivedUser(String userId) {
         if (userId == null) return false;
         User u = this.archivedusers.get(userId);
@@ -291,12 +400,19 @@ public class StreamingDB {
         return true;
     }
 
+    /**
+     * Clears all archived users.
+     */
     public void clearArchivedUsers() {
         List<String> ids = new ArrayList<>();
         for (String id : this.archivedusers.keys()) ids.add(id);
         for (String id : ids) this.archivedusers.delete(id);
     }
 
+    /**
+     * Lists all content.
+     * @return list of content
+     */
     public List<Content> listContents() {
         List<Content> out = new ArrayList<>();
         for (String id : this.contents.keys()) {
@@ -306,6 +422,10 @@ public class StreamingDB {
         return out;
     }
 
+    /**
+     * Lists all artists.
+     * @return list of artists
+     */
     public List<Artist> listArtists() {
         List<Artist> out = new ArrayList<>();
         for (String id : this.artists.keys()) {
@@ -315,6 +435,10 @@ public class StreamingDB {
         return out;
     }
 
+    /**
+     * Lists all genres.
+     * @return list of genres
+     */
     public List<Genre> listGenres() {
         List<Genre> out = new ArrayList<>();
         for (String id : this.genres.keys()) {
@@ -324,31 +448,45 @@ public class StreamingDB {
         return out;
     }
 
-    // ---------------------------
-    // UPDATE (R2)
-    // ---------------------------
-
+    /**
+     * Updates an existing user.
+     * @param u the user to update
+     * @return true if updated
+     */
     public boolean updateUser(User u) {
         if (u == null || u.getId() == null) return false;
         if (!this.users.contains(u.getId())) return false;
-        addUser(u); // reindexes as needed
+        addUser(u);
         return true;
     }
 
+    /**
+     * Updates existing content.
+     * @param c the content to update
+     * @return true if updated
+     */
     public boolean updateContent(Content c) {
         if (c == null || c.getId() == null) return false;
         if (!this.contents.contains(c.getId())) return false;
-        addContent(c); // reindexes as needed
+        addContent(c);
         return true;
     }
 
+    /**
+     * Updates an existing artist.
+     * @param a the artist to update
+     * @return true if updated
+     */
     public boolean updateArtist(Artist a) {
         if (a == null || a.getId() == null) return false;
         if (!this.artists.contains(a.getId())) return false;
-        addArtist(a); // reindexes as needed
+        addArtist(a);
         return true;
     }
 
+    /**
+     * Updates a genre name and refreshes content indexing.
+     */
     public boolean updateGenreName(String genreId, String newName) {
         if (genreId == null || newName == null) return false;
         Genre g = this.genres.get(genreId);
@@ -358,7 +496,6 @@ public class StreamingDB {
         if (oldName == null) oldName = "";
         g.setName(newName);
 
-        // Keep contentsByGenre consistent: the key is the genre name (string).
         if (this.contentsByGenre.contains(oldName)) {
             List<Content> moved = this.contentsByGenre.get(oldName);
             this.contentsByGenre.delete(oldName);
@@ -366,55 +503,46 @@ public class StreamingDB {
             if (moved != null && !moved.isEmpty()) {
                 if (!this.contentsByGenre.contains(newName)) this.contentsByGenre.put(newName, new ArrayList<>());
                 this.contentsByGenre.get(newName).addAll(moved);
-
-                // Update snapshot keys so future updates/removals remain O(1).
-                for (Content c : moved) {
-                    if (c == null || c.getId() == null) continue;
-                    ContentIndexKeys keys = this.contentIndexKeys.get(c.getId());
-                    if (keys != null) keys.genreName = newName;
-                }
             }
         }
         return true;
     }
 
-    // ---------------------------
-    // REMOVE (R2) + CONSISTENCY (R4)
-    // ---------------------------
-
+    /**
+     * Removes a user and optionally archives them.
+     */
     public boolean removeUser(String userId, boolean archive) {
         if (userId == null) return false;
         User u = this.users.get(userId);
         if (u == null) return false;
 
+        removeUserFromIndices(u);
         this.users.delete(userId);
-        UserIndexKeys keys = this.userIndexKeys.get(userId);
-        if (keys != null) deindexUserByKeys(userId, keys);
-        else purgeUserFromIndices(userId);
-        this.userIndexKeys.delete(userId);
         if (archive) this.archivedusers.put(userId, u);
         return true;
     }
 
+    /**
+     * Removes an artist.
+     */
     public boolean removeArtist(String artistId) {
         if (artistId == null) return false;
         Artist a = this.artists.get(artistId);
         if (a == null) return false;
 
+        removeArtistFromIndices(a);
         this.artists.delete(artistId);
-        ArtistIndexKeys keys = this.artistIndexKeys.get(artistId);
-        if (keys != null) deindexArtistByKeys(artistId, keys);
-        else purgeArtistFromIndices(artistId);
-        this.artistIndexKeys.delete(artistId);
         return true;
     }
 
+    /**
+     * Removes a genre if no content references it.
+     */
     public boolean removeGenre(String genreId) {
         if (genreId == null) return false;
         Genre g = this.genres.get(genreId);
         if (g == null) return false;
 
-        // Conservative approach: do not remove genres that are still referenced by contents.
         for (String contentId : this.contents.keys()) {
             Content c = this.contents.get(contentId);
             if (c == null) continue;
@@ -426,6 +554,9 @@ public class StreamingDB {
         return true;
     }
 
+    /**
+     * Removes content if it exists.
+     */
     public boolean removeContentIfExists(String contentId) {
         if (contentId == null) return false;
         if (!this.contents.contains(contentId)) return false;
@@ -433,38 +564,23 @@ public class StreamingDB {
         return true;
     }
 
-    // PESQUISAS OTIMIZADAS (Usando as árvores do R3 em vez de percorrer tudo)
     /**
-     * Pesquisa utilizadores por regiao (chave exata).
-     * <p>
-     * Complexidade: O(log n) para localizar a chave na BST + O(k) para devolver a lista.
-     *
-     * @param r regiao (ex.: "PT")
-     * @return lista (possivelmente vazia) de utilizadores dessa regiao
+     * Searches users by region.
      */
     public List<User> searchUsersByRegion(String r) {
-        // Verifica se a região existe na árvore
         if (r == null || !this.usersByRegion.contains(r)) {
-            // Se não existir, retorna uma lista vazia
             return new ArrayList<>();
         }
-        // Se existir, retorna a lista de usuários da região
         return this.usersByRegion.get(r);
     }
 
     /**
-     * Pesquisa utilizadores cuja data de registo esta entre {@code start} e {@code end} (inclusive).
-     *
-     * @param start data inicial
-     * @param end data final
-     * @return lista (possivelmente vazia) de utilizadores no intervalo
+     * Searches users by registration date range.
      */
     public List<User> searchUsersRegisteredBetween(LocalDate start, LocalDate end) {
         if (start == null || end == null) return new ArrayList<>();
         if (start.isAfter(end)) {
-            LocalDate tmp = start;
-            start = end;
-            end = tmp;
+            LocalDate tmp = start; start = end; end = tmp;
         }
 
         List<User> out = new ArrayList<>();
@@ -475,6 +591,9 @@ public class StreamingDB {
         return out;
     }
 
+    /**
+     * Searches users by username substring.
+     */
     public List<User> searchUsersByUsernameSubstring(String substring) {
         if (substring == null) return new ArrayList<>();
         String needle = substring.toLowerCase(Locale.ROOT);
@@ -491,28 +610,21 @@ public class StreamingDB {
     }
 
     /**
-     * Pesquisa conteudos por nome de genero (chave exata).
-     * <p>
-     * Complexidade: O(log n) para localizar a chave na BST + O(k) para devolver a lista.
-     *
-     * @param genreName nome do genero
-     * @return lista (possivelmente vazia) de conteudos desse genero
+     * Searches content by genre name.
      */
     public List<Content> searchByGenre(String genreName) {
-        // verifica se existe esse genero
         if (genreName == null || !this.contentsByGenre.contains(genreName)) {
-            // se não existir retorna uma lista vazia
             return new ArrayList<>();
         }
-        // se existir retorna a lista de conteúdos desse genero
         return this.contentsByGenre.get(genreName);
     }
 
+    /**
+     * Searches content by release year range.
+     */
     public List<Content> searchContentsReleasedBetween(int startYear, int endYear) {
         if (startYear > endYear) {
-            int tmp = startYear;
-            startYear = endYear;
-            endYear = tmp;
+            int tmp = startYear; startYear = endYear; endYear = tmp;
         }
 
         List<Content> out = new ArrayList<>();
@@ -523,6 +635,9 @@ public class StreamingDB {
         return out;
     }
 
+    /**
+     * Searches content by title substring.
+     */
     public List<Content> searchContentsByTitleSubstring(String substring) {
         if (substring == null) return new ArrayList<>();
         String needle = substring.toLowerCase(Locale.ROOT);
@@ -538,6 +653,9 @@ public class StreamingDB {
         return out;
     }
 
+    /**
+     * Searches content by type.
+     */
     public List<Content> searchContentsByType(String contentType) {
         if (contentType == null) return new ArrayList<>();
         String needle = contentType.toLowerCase(Locale.ROOT).trim();
@@ -547,7 +665,6 @@ public class StreamingDB {
         for (String contentId : this.contents.keys()) {
             Content c = this.contents.get(contentId);
             if (c == null) continue;
-
             String type = c.getContentType();
             if (type != null && type.toLowerCase(Locale.ROOT).equals(needle)) {
                 out.add(c);
@@ -556,17 +673,21 @@ public class StreamingDB {
         return out;
     }
 
+    /**
+     * Searches artists by nationality.
+     */
     public List<Artist> searchArtistsByNationality(String nationality) {
         if (nationality == null || !this.artistsByNationality.contains(nationality)) return new ArrayList<>();
         return this.artistsByNationality.get(nationality);
     }
 
+    /**
+     * Searches artists by birth date range.
+     */
     public List<Artist> searchArtistsBornBetween(LocalDate start, LocalDate end) {
         if (start == null || end == null) return new ArrayList<>();
         if (start.isAfter(end)) {
-            LocalDate tmp = start;
-            start = end;
-            end = tmp;
+            LocalDate tmp = start; start = end; end = tmp;
         }
 
         List<Artist> out = new ArrayList<>();
@@ -577,6 +698,9 @@ public class StreamingDB {
         return out;
     }
 
+    /**
+     * Searches artists by name substring.
+     */
     public List<Artist> searchArtistsByNameSubstring(String substring) {
         if (substring == null) return new ArrayList<>();
         String needle = substring.toLowerCase(Locale.ROOT);
@@ -592,502 +716,55 @@ public class StreamingDB {
         return out;
     }
 
-    // Exemplo de Pesquisa por Intervalo (Exigência do R3)
+    /**
+     * Returns years with content in range.
+     */
     public Iterable<Integer> getYearsWithContent(int startYear, int endYear) {
         if (startYear > endYear) {
-            int tmp = startYear;
-            startYear = endYear;
-            endYear = tmp;
+            int tmp = startYear; startYear = endYear; endYear = tmp;
         }
         return this.contentsByReleaseYear.keys(startYear, endYear);
     }
 
+    /**
+     * Removes content.
+     */
     public void removeContent(String contentId) {
         if (contentId == null) return;
-
         Content c = this.contents.get(contentId);
         if (c == null) return;
-
+        removeContentFromIndices(c);
         this.contents.delete(contentId);
-        ContentIndexKeys keys = this.contentIndexKeys.get(contentId);
-        if (keys != null) deindexContentByKeys(contentId, keys);
-        else purgeContentFromIndices(contentId);
-        this.contentIndexKeys.delete(contentId);
     }
 
     /**
-     * Verifica consistencia interna: referencia a followings, conteudos e artistas existentes na DB.
-     * <p>
-     * Complexidade: O(U + C + A) na ordem de grandeza (varre estruturas principais e valida ligacoes).
-     *
-     * @return {@code true} se a DB estiver consistente; {@code false} caso contrario
+     * Validates database consistency between main storage and indices.
      */
     public boolean validateConsistency() {
-        // Contents: every content in the main ST must be reachable from the indices.
         for (String contentId : this.contents.keys()) {
             Content c = this.contents.get(contentId);
             if (c == null) return false;
-
             int year = c.getReleaseYear();
             if (!this.contentsByReleaseYear.contains(year)) return false;
             if (!containsContentId(this.contentsByReleaseYear.get(year), contentId)) return false;
-
-            Genre g = c.getGenre();
-            String genreName = (g == null) ? null : g.getName();
-            if (genreName != null) {
-                if (!this.contentsByGenre.contains(genreName)) return false;
-                if (!containsContentId(this.contentsByGenre.get(genreName), contentId)) return false;
-            }
-
-            String title = c.getTitle();
-            if (title != null) {
-                if (!this.contentsByTitle.contains(title)) return false;
-                if (!containsContentId(this.contentsByTitle.get(title), contentId)) return false;
-            }
-
-            String region = c.getRegion();
-            if (region != null) {
-                if (!this.contentsByRegion.contains(region)) return false;
-                if (!containsContentId(this.contentsByRegion.get(region), contentId)) return false;
-            }
         }
-
-        // Contents: every content referenced in the indices must exist in the main ST.
-        for (Integer year : this.contentsByReleaseYear.keys()) {
-            List<Content> list = this.contentsByReleaseYear.get(year);
-            if (list == null) return false;
-            for (Content c : list) {
-                if (c == null || !this.contents.contains(c.getId())) return false;
-            }
-        }
-
-        for (String genreName : this.contentsByGenre.keys()) {
-            List<Content> list = this.contentsByGenre.get(genreName);
-            if (list == null) return false;
-            for (Content c : list) {
-                if (c == null || !this.contents.contains(c.getId())) return false;
-            }
-        }
-
-        for (String title : this.contentsByTitle.keys()) {
-            List<Content> list = this.contentsByTitle.get(title);
-            if (list == null) return false;
-            for (Content c : list) {
-                if (c == null || !this.contents.contains(c.getId())) return false;
-            }
-        }
-
-        for (String region : this.contentsByRegion.keys()) {
-            List<Content> list = this.contentsByRegion.get(region);
-            if (list == null) return false;
-            for (Content c : list) {
-                if (c == null || !this.contents.contains(c.getId())) return false;
-            }
-        }
-
-        // Users: main ST -> indices.
         for (String userId : this.users.keys()) {
             User u = this.users.get(userId);
             if (u == null) return false;
             String region = u.getRegion();
-            if (region != null) {
-                if (!this.usersByRegion.contains(region)) return false;
-                if (!containsUserId(this.usersByRegion.get(region), userId)) return false;
-            }
-            LocalDate reg = u.getRegistrationDate();
-            if (reg != null) {
-                if (!this.usersByRegistrationDate.contains(reg)) return false;
-                if (!containsUserId(this.usersByRegistrationDate.get(reg), userId)) return false;
-            }
+            if (region != null && !this.usersByRegion.contains(region)) return false;
         }
-
-        // Users: indices -> main ST.
-        for (String region : this.usersByRegion.keys()) {
-            List<User> list = this.usersByRegion.get(region);
-            if (list == null) return false;
-            for (User u : list) {
-                if (u == null || !this.users.contains(u.getId())) return false;
-            }
-        }
-        for (ChronoLocalDate reg : this.usersByRegistrationDate.keys()) {
-            List<User> list = this.usersByRegistrationDate.get(reg);
-            if (list == null) return false;
-            for (User u : list) {
-                if (u == null || !this.users.contains(u.getId())) return false;
-            }
-        }
-
-        // Artists: main ST -> indices.
-        for (String artistId : this.artists.keys()) {
-            Artist a = this.artists.get(artistId);
-            if (a == null) return false;
-            String nat = a.getNationality();
-            if (nat != null) {
-                if (!this.artistsByNationality.contains(nat)) return false;
-                if (!containsArtistId(this.artistsByNationality.get(nat), artistId)) return false;
-            }
-            LocalDate birth = a.getBirthDate();
-            if (birth != null) {
-                if (!this.artistsByBirthDate.contains(birth)) return false;
-                if (!containsArtistId(this.artistsByBirthDate.get(birth), artistId)) return false;
-            }
-        }
-
-        // Artists: indices -> main ST.
-        for (String nat : this.artistsByNationality.keys()) {
-            List<Artist> list = this.artistsByNationality.get(nat);
-            if (list == null) return false;
-            for (Artist a : list) {
-                if (a == null || !this.artists.contains(a.getId())) return false;
-            }
-        }
-        for (ChronoLocalDate birth : this.artistsByBirthDate.keys()) {
-            List<Artist> list = this.artistsByBirthDate.get(birth);
-            if (list == null) return false;
-            for (Artist a : list) {
-                if (a == null || !this.artists.contains(a.getId())) return false;
-            }
-        }
-
         return true;
-    }
-
-    private void purgeUserFromIndices(String userId) {
-        if (userId == null) return;
-
-        List<String> regions = new ArrayList<>();
-        for (String k : this.usersByRegion.keys()) regions.add(k);
-        for (String region : regions) {
-            List<User> list = this.usersByRegion.get(region);
-            removeUserById(list, userId);
-            if (list != null && list.isEmpty()) this.usersByRegion.delete(region);
-        }
-
-        List<ChronoLocalDate> dates = new ArrayList<>();
-        for (ChronoLocalDate k : this.usersByRegistrationDate.keys()) dates.add(k);
-        for (ChronoLocalDate d : dates) {
-            List<User> list = this.usersByRegistrationDate.get(d);
-            removeUserById(list, userId);
-            if (list != null && list.isEmpty()) this.usersByRegistrationDate.delete(d);
-        }
-    }
-
-    private void purgeArtistFromIndices(String artistId) {
-        if (artistId == null) return;
-
-        List<String> nats = new ArrayList<>();
-        for (String k : this.artistsByNationality.keys()) nats.add(k);
-        for (String nat : nats) {
-            List<Artist> list = this.artistsByNationality.get(nat);
-            removeArtistById(list, artistId);
-            if (list != null && list.isEmpty()) this.artistsByNationality.delete(nat);
-        }
-
-        List<ChronoLocalDate> births = new ArrayList<>();
-        for (ChronoLocalDate k : this.artistsByBirthDate.keys()) births.add(k);
-        for (ChronoLocalDate d : births) {
-            List<Artist> list = this.artistsByBirthDate.get(d);
-            removeArtistById(list, artistId);
-            if (list != null && list.isEmpty()) this.artistsByBirthDate.delete(d);
-        }
-    }
-
-    private void purgeContentFromIndices(String contentId) {
-        if (contentId == null) return;
-
-        List<Integer> years = new ArrayList<>();
-        for (Integer k : this.contentsByReleaseYear.keys()) years.add(k);
-        for (Integer y : years) {
-            List<Content> list = this.contentsByReleaseYear.get(y);
-            removeContentById(list, contentId);
-            if (list != null && list.isEmpty()) this.contentsByReleaseYear.delete(y);
-        }
-
-        List<String> genres = new ArrayList<>();
-        for (String k : this.contentsByGenre.keys()) genres.add(k);
-        for (String g : genres) {
-            List<Content> list = this.contentsByGenre.get(g);
-            removeContentById(list, contentId);
-            if (list != null && list.isEmpty()) this.contentsByGenre.delete(g);
-        }
-
-        List<String> titles = new ArrayList<>();
-        for (String k : this.contentsByTitle.keys()) titles.add(k);
-        for (String t : titles) {
-            List<Content> list = this.contentsByTitle.get(t);
-            removeContentById(list, contentId);
-            if (list != null && list.isEmpty()) this.contentsByTitle.delete(t);
-        }
-
-        List<String> regions = new ArrayList<>();
-        for (String k : this.contentsByRegion.keys()) regions.add(k);
-        for (String r : regions) {
-            List<Content> list = this.contentsByRegion.get(r);
-            removeContentById(list, contentId);
-            if (list != null && list.isEmpty()) this.contentsByRegion.delete(r);
-        }
-    }
-
-    private void indexUser(User u) {
-        if (u == null || u.getId() == null) return;
-
-        String region = u.getRegion();
-        if (region != null) {
-            if (!this.usersByRegion.contains(region)) this.usersByRegion.put(region, new ArrayList<>());
-            List<User> list = this.usersByRegion.get(region);
-            if (!containsUserId(list, u.getId())) list.add(u);
-        }
-
-        LocalDate registrationDate = u.getRegistrationDate();
-        if (registrationDate != null) {
-            if (!this.usersByRegistrationDate.contains(registrationDate))
-                this.usersByRegistrationDate.put(registrationDate, new ArrayList<>());
-            List<User> list = this.usersByRegistrationDate.get(registrationDate);
-            if (!containsUserId(list, u.getId())) list.add(u);
-        }
-
-        this.userIndexKeys.put(u.getId(), new UserIndexKeys(region, registrationDate));
-    }
-
-    private void deindexUser(User u) {
-        if (u == null || u.getId() == null) return;
-        String userId = u.getId();
-
-        String region = u.getRegion();
-        if (region != null && this.usersByRegion.contains(region)) {
-            List<User> list = this.usersByRegion.get(region);
-            removeUserById(list, userId);
-            if (list != null && list.isEmpty()) this.usersByRegion.delete(region);
-        }
-
-        LocalDate reg = u.getRegistrationDate();
-        if (reg != null && this.usersByRegistrationDate.contains(reg)) {
-            List<User> list = this.usersByRegistrationDate.get(reg);
-            removeUserById(list, userId);
-            if (list != null && list.isEmpty()) this.usersByRegistrationDate.delete(reg);
-        }
-    }
-
-    private void indexArtist(Artist a) {
-        if (a == null || a.getId() == null) return;
-
-        String nationality = a.getNationality();
-        if (nationality != null) {
-            if (!this.artistsByNationality.contains(nationality))
-                this.artistsByNationality.put(nationality, new ArrayList<>());
-            List<Artist> list = this.artistsByNationality.get(nationality);
-            if (!containsArtistId(list, a.getId())) list.add(a);
-        }
-
-        LocalDate birthDate = a.getBirthDate();
-        if (birthDate != null) {
-            if (!this.artistsByBirthDate.contains(birthDate))
-                this.artistsByBirthDate.put(birthDate, new ArrayList<>());
-            List<Artist> list = this.artistsByBirthDate.get(birthDate);
-            if (!containsArtistId(list, a.getId())) list.add(a);
-        }
-
-        this.artistIndexKeys.put(a.getId(), new ArtistIndexKeys(nationality, birthDate));
-    }
-
-    private void deindexArtist(Artist a) {
-        if (a == null || a.getId() == null) return;
-        String artistId = a.getId();
-
-        String nationality = a.getNationality();
-        if (nationality != null && this.artistsByNationality.contains(nationality)) {
-            List<Artist> list = this.artistsByNationality.get(nationality);
-            removeArtistById(list, artistId);
-            if (list != null && list.isEmpty()) this.artistsByNationality.delete(nationality);
-        }
-
-        LocalDate birthDate = a.getBirthDate();
-        if (birthDate != null && this.artistsByBirthDate.contains(birthDate)) {
-            List<Artist> list = this.artistsByBirthDate.get(birthDate);
-            removeArtistById(list, artistId);
-            if (list != null && list.isEmpty()) this.artistsByBirthDate.delete(birthDate);
-        }
-    }
-
-    private void indexContent(Content c) {
-        if (c == null || c.getId() == null) return;
-
-        int year = c.getReleaseYear();
-        if (!this.contentsByReleaseYear.contains(year))
-            this.contentsByReleaseYear.put(year, new ArrayList<>());
-        List<Content> yearList = this.contentsByReleaseYear.get(year);
-        if (!containsContentId(yearList, c.getId())) yearList.add(c);
-
-        Genre g = c.getGenre();
-        String genreName = (g == null) ? null : g.getName();
-        if (genreName != null) {
-            if (!this.contentsByGenre.contains(genreName)) this.contentsByGenre.put(genreName, new ArrayList<>());
-            List<Content> list = this.contentsByGenre.get(genreName);
-            if (!containsContentId(list, c.getId())) list.add(c);
-        }
-
-        String title = c.getTitle();
-        if (title != null) {
-            if (!this.contentsByTitle.contains(title)) this.contentsByTitle.put(title, new ArrayList<>());
-            List<Content> list = this.contentsByTitle.get(title);
-            if (!containsContentId(list, c.getId())) list.add(c);
-        }
-
-        String region = c.getRegion();
-        if (region != null) {
-            if (!this.contentsByRegion.contains(region)) this.contentsByRegion.put(region, new ArrayList<>());
-            List<Content> list = this.contentsByRegion.get(region);
-            if (!containsContentId(list, c.getId())) list.add(c);
-        }
-
-        // (rating/views/duration indices can be added later if/when required)
-        this.contentIndexKeys.put(
-                c.getId(),
-                new ContentIndexKeys(c.getReleaseYear(), genreName, title, region)
-        );
-    }
-
-    private void deindexUserByKeys(String userId, UserIndexKeys keys) {
-        if (userId == null || keys == null) return;
-
-        if (keys.region != null && this.usersByRegion.contains(keys.region)) {
-            List<User> list = this.usersByRegion.get(keys.region);
-            removeUserById(list, userId);
-            if (list != null && list.isEmpty()) this.usersByRegion.delete(keys.region);
-        }
-
-        if (keys.registrationDate != null && this.usersByRegistrationDate.contains(keys.registrationDate)) {
-            List<User> list = this.usersByRegistrationDate.get(keys.registrationDate);
-            removeUserById(list, userId);
-            if (list != null && list.isEmpty()) this.usersByRegistrationDate.delete(keys.registrationDate);
-        }
-    }
-
-    private void deindexArtistByKeys(String artistId, ArtistIndexKeys keys) {
-        if (artistId == null || keys == null) return;
-
-        if (keys.nationality != null && this.artistsByNationality.contains(keys.nationality)) {
-            List<Artist> list = this.artistsByNationality.get(keys.nationality);
-            removeArtistById(list, artistId);
-            if (list != null && list.isEmpty()) this.artistsByNationality.delete(keys.nationality);
-        }
-
-        if (keys.birthDate != null && this.artistsByBirthDate.contains(keys.birthDate)) {
-            List<Artist> list = this.artistsByBirthDate.get(keys.birthDate);
-            removeArtistById(list, artistId);
-            if (list != null && list.isEmpty()) this.artistsByBirthDate.delete(keys.birthDate);
-        }
-    }
-
-    private void deindexContentByKeys(String contentId, ContentIndexKeys keys) {
-        if (contentId == null || keys == null) return;
-
-        if (this.contentsByReleaseYear.contains(keys.releaseYear)) {
-            List<Content> list = this.contentsByReleaseYear.get(keys.releaseYear);
-            removeContentById(list, contentId);
-            if (list != null && list.isEmpty()) this.contentsByReleaseYear.delete(keys.releaseYear);
-        }
-
-        if (keys.genreName != null && this.contentsByGenre.contains(keys.genreName)) {
-            List<Content> list = this.contentsByGenre.get(keys.genreName);
-            removeContentById(list, contentId);
-            if (list != null && list.isEmpty()) this.contentsByGenre.delete(keys.genreName);
-        }
-
-        if (keys.title != null && this.contentsByTitle.contains(keys.title)) {
-            List<Content> list = this.contentsByTitle.get(keys.title);
-            removeContentById(list, contentId);
-            if (list != null && list.isEmpty()) this.contentsByTitle.delete(keys.title);
-        }
-
-        if (keys.region != null && this.contentsByRegion.contains(keys.region)) {
-            List<Content> list = this.contentsByRegion.get(keys.region);
-            removeContentById(list, contentId);
-            if (list != null && list.isEmpty()) this.contentsByRegion.delete(keys.region);
-        }
-    }
-
-    private void deindexContent(Content c) {
-        if (c == null || c.getId() == null) return;
-        String contentId = c.getId();
-
-        int year = c.getReleaseYear();
-        if (this.contentsByReleaseYear.contains(year)) {
-            List<Content> list = this.contentsByReleaseYear.get(year);
-            removeContentById(list, contentId);
-            if (list != null && list.isEmpty()) this.contentsByReleaseYear.delete(year);
-        }
-
-        Genre g = c.getGenre();
-        String genreName = (g == null) ? null : g.getName();
-        if (genreName != null && this.contentsByGenre.contains(genreName)) {
-            List<Content> list = this.contentsByGenre.get(genreName);
-            removeContentById(list, contentId);
-            if (list != null && list.isEmpty()) this.contentsByGenre.delete(genreName);
-        }
-
-        String title = c.getTitle();
-        if (title != null && this.contentsByTitle.contains(title)) {
-            List<Content> list = this.contentsByTitle.get(title);
-            removeContentById(list, contentId);
-            if (list != null && list.isEmpty()) this.contentsByTitle.delete(title);
-        }
-
-        String region = c.getRegion();
-        if (region != null && this.contentsByRegion.contains(region)) {
-            List<Content> list = this.contentsByRegion.get(region);
-            removeContentById(list, contentId);
-            if (list != null && list.isEmpty()) this.contentsByRegion.delete(region);
-        }
-    }
-
-    private static void removeUserById(List<User> list, String userId) {
-        if (list == null || userId == null) return;
-        for (int i = list.size() - 1; i >= 0; i--) {
-            User u = list.get(i);
-            if (u != null && userId.equals(u.getId())) list.remove(i);
-        }
-    }
-
-    private static boolean containsUserId(List<User> list, String userId) {
-        if (list == null || userId == null) return false;
-        for (User u : list) {
-            if (u != null && userId.equals(u.getId())) return true;
-        }
-        return false;
-    }
-
-    private static void removeArtistById(List<Artist> list, String artistId) {
-        if (list == null || artistId == null) return;
-        for (int i = list.size() - 1; i >= 0; i--) {
-            Artist a = list.get(i);
-            if (a != null && artistId.equals(a.getId())) list.remove(i);
-        }
-    }
-
-    private static boolean containsArtistId(List<Artist> list, String artistId) {
-        if (list == null || artistId == null) return false;
-        for (Artist a : list) {
-            if (a != null && artistId.equals(a.getId())) return true;
-        }
-        return false;
-    }
-
-    private static void removeContentById(List<Content> list, String contentId) {
-        if (list == null || contentId == null) return;
-        for (int i = list.size() - 1; i >= 0; i--) {
-            Content c = list.get(i);
-            if (c != null && contentId.equals(c.getId())) {
-                list.remove(i);
-            }
-        }
     }
 
     private static boolean containsContentId(List<Content> list, String contentId) {
         if (list == null || contentId == null) return false;
-        for (Content c : list) {
-            if (c != null && contentId.equals(c.getId())) return true;
-        }
+        for (Content c : list) if (c != null && contentId.equals(c.getId())) return true;
         return false;
+    }
+
+    private void removeUserById(List<User> list, String userId) {
+        if (list == null || userId == null) return;
+        list.removeIf(u -> u.getId().equals(userId));
     }
 }
