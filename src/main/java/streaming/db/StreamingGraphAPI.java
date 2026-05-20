@@ -21,29 +21,29 @@ import java.util.List;
  * e o grafo interno (StreamingGraph).
  *
  * RESPONSABILIDADES:
- *   - Registar entidades no grafo (vértices)
- *   - Criar relações entre entidades (arestas): watch, rate, follow, participação de artistas
- *   - Consultar relações (quem viu o quê, quem segue quem, etc.)
- *   - Remover entidades e relações
- *   - Listar informação do grafo
+ * - Registar entidades no grafo (vértices)
+ * - Criar relações entre entidades (arestas): watch, rate, follow, participação de artistas
+ * - Consultar relações (quem viu o quê, quem segue quem, etc.)
+ * - Remover entidades e relações
+ * - Listar informação do grafo
  *
  * PORQUÊ SEPARAR DO StreamingGraph?
- *   - O StreamingGraph lida com a mecânica interna (índices, algs4, rebuild, etc.)
- *   - Esta API lida com a lógica de negócio (validações, integração com StreamingDB, etc.)
- *   - Na defesa, mostra que sabes aplicar separação de responsabilidades
+ * - O StreamingGraph lida com a mecânica interna (índices, algs4, rebuild, etc.)
+ * - Esta API lida com a lógica de negócio (validações, integração com StreamingDB, etc.)
+ * - Na defesa, mostra que sabes aplicar separação de responsabilidades
  *
  * COMO USAR:
- *   StreamingDB db = new StreamingDB();
- *   StreamingGraph graph = new StreamingGraph();
- *   StreamingGraphAPI api = new StreamingGraphAPI(db, graph);
+ * StreamingDB db = new StreamingDB();
+ * StreamingGraph graph = new StreamingGraph();
+ * StreamingGraphAPI api = new StreamingGraphAPI(db, graph);
  *
- *   // Registar entidades
- *   api.registerUser(user);
- *   api.registerContent(movie);
+ * // Registar entidades
+ * api.registerUser(user);
+ * api.registerContent(movie);
  *
- *   // Criar relações
- *   api.addWatch(user.getId(), movie.getId(), 100.0, 8.5);
- *   api.addFollow(user1.getId(), user2.getId());
+ * // Criar relações
+ * api.addWatch(user.getId(), movie.getId(), 100.0, 8.5);
+ * api.addFollow(user1.getId(), user2.getId());
  */
 public class StreamingGraphAPI {
 
@@ -233,6 +233,31 @@ public class StreamingGraphAPI {
     }
 
     /**
+     * Regista que um utilizador CLASSIFICOU um conteúdo com timestamp específico.
+     * Útil para importar dados históricos de ficheiros.
+     *
+     * @param userId    o ID do utilizador
+     * @param contentId o ID do conteúdo
+     * @param rating    a classificação
+     * @param timestamp data/hora da classificação
+     * @return true se a relação foi criada com sucesso
+     */
+    public boolean addRating(String userId, String contentId, double rating, LocalDateTime timestamp) {
+        User u = db.getUser(userId);
+        Content c = db.getContent(contentId);
+        if (u == null || c == null) return false;
+
+        Interaction interaction = new Interaction(
+                u, c, InteractionType.RATE,
+                timestamp,
+                0, rating, rating
+        );
+
+        graph.addEdge(interaction);
+        return true;
+    }
+
+    /**
      * Regista que um utilizador CLICOU num conteúdo (mostrou interesse).
      *
      * @param userId    o ID do utilizador
@@ -247,6 +272,30 @@ public class StreamingGraphAPI {
         Interaction interaction = new Interaction(
                 u, c, InteractionType.CLICK,
                 LocalDateTime.now(),
+                0, 0, 1.0  // peso fixo de 1.0 para clicks
+        );
+
+        graph.addEdge(interaction);
+        return true;
+    }
+
+    /**
+     * Regista que um utilizador CLICOU num conteúdo com timestamp específico.
+     * Útil para importar dados históricos de ficheiros.
+     *
+     * @param userId    o ID do utilizador
+     * @param contentId o ID do conteúdo
+     * @param timestamp data/hora do clique
+     * @return true se a relação foi criada com sucesso
+     */
+    public boolean addClick(String userId, String contentId, LocalDateTime timestamp) {
+        User u = db.getUser(userId);
+        Content c = db.getContent(contentId);
+        if (u == null || c == null) return false;
+
+        Interaction interaction = new Interaction(
+                u, c, InteractionType.CLICK,
+                timestamp,
                 0, 0, 1.0  // peso fixo de 1.0 para clicks
         );
 

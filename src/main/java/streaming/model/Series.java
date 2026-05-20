@@ -18,28 +18,33 @@ public class Series extends Content {
   /** Estado da serie (em exibicao, terminada, cancelada). */
   private SeriesStatus status;
 
-    /**
-     * Cria uma serie.
-     *
-     * @param id identificador unico
-     * @param createdAt data/hora de criacao
-     * @param title titulo
-     * @param releaseYear ano de lancamento
-     * @param genre genero
-     * @param region regiao
-     * @param seasons numero de temporadas
-     * @param status estado da serie
-     */
-    public Series (String id, LocalDateTime createdAt, String title, int releaseYear, Genre genre, String region, int seasons, SeriesStatus status) {
-super(id, createdAt, title, releaseYear, genre, region, 0.0, 0, new ArrayList<>()); // 0.0 = rating, 0 = views, new ArrayList<>() = artists
-      this.seasons = seasons;
-      this.status = status;
-      this.episodes = new ArrayList<>();
-    }
+  /**
+   * Cria uma serie.
+   *
+   * @param id identificador unico
+   * @param createdAt data/hora de criacao
+   * @param title titulo
+   * @param releaseYear ano de lancamento
+   * @param genre genero
+   * @param region regiao
+   * @param seasons numero de temporadas
+   * @param status estado da serie
+   */
+  public Series (String id, LocalDateTime createdAt, String title, int releaseYear, Genre genre, String region, int seasons, SeriesStatus status) {
+    super(id, createdAt, title, releaseYear, genre, region, 0.0, 0, new ArrayList<>()); // 0.0 = rating, 0 = views, new ArrayList<>() = artists
+    this.seasons = seasons;
+    this.status = status;
+    this.episodes = new ArrayList<>();
+  }
 
   /** @return numero de temporadas */
   public int getSeasons() {
-  return seasons;
+    return seasons;
+  }
+
+  /** @return o estado da serie */
+  public SeriesStatus getStatus() {
+    return status;
   }
 
   /** @return lista de episodios */

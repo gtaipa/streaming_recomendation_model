@@ -67,9 +67,7 @@ public class GraphAlgorithms {
         for (Interaction i : graph.getInteractions()) {
             if (i.getType() != type) continue;
             String fId = i.getUser().getId();
-            Entity target = i.getTargetEntity();
-            if (target == null) continue;
-            String tId = target.getId();
+            String tId = i.getContent().getId();
             if (graph.containsVertex(fId) && graph.containsVertex(tId))
                 temp.addEdge(new DirectedEdge(graph.getIndex(fId), graph.getIndex(tId), i.getWeight()));
         }
@@ -100,6 +98,7 @@ public class GraphAlgorithms {
         if (genreName == null) return sub;
         for (Interaction i : graph.getInteractions()) {
             Content c = i.getContent();
+            if (c == null) continue;
             if (c.getGenre() != null && genreName.equalsIgnoreCase(c.getGenre().getName())) {
                 sub.addVertex(i.getUser());
                 sub.addVertex(c);
@@ -114,6 +113,7 @@ public class GraphAlgorithms {
         StreamingGraph sub = new StreamingGraph();
         if (region == null) return sub;
         for (Interaction i : graph.getInteractions()) {
+            if (i.getContent() == null) continue;
             if (region.equalsIgnoreCase(i.getContent().getRegion())) {
                 sub.addVertex(i.getUser());
                 sub.addVertex(i.getContent());
@@ -127,6 +127,7 @@ public class GraphAlgorithms {
     public StreamingGraph subgraphByMinRating(double minRating) {
         StreamingGraph sub = new StreamingGraph();
         for (Interaction i : graph.getInteractions()) {
+            if (i.getContent() == null) continue;
             if (i.getRating() >= minRating) {
                 sub.addVertex(i.getUser());
                 sub.addVertex(i.getContent());
@@ -138,30 +139,7 @@ public class GraphAlgorithms {
 
     /** R8b) Caminho mais curto entre dois artistas via conteúdos partilhados. */
     public List<Entity> shortestPathBetweenArtists(String artistId1, String artistId2) {
-        if (!graph.containsVertex(artistId1) || !graph.containsVertex(artistId2))
-            return new ArrayList<>();
-
-        // Enunciado: via conteudos onde participaram.
-        // Construir subgrafo bipartido Artist <-> Content e tratar ligacoes como nao-direcionadas
-        // para permitir Artist -> Content -> Artist.
-        EdgeWeightedDigraph temp = new EdgeWeightedDigraph(graph.getGraph().V());
-        for (int v = 0; v < graph.getGraph().V(); v++) {
-            Entity from = graph.getEntityByIndex(v);
-            if (from == null) continue;
-            for (DirectedEdge e : graph.getGraph().adj(v)) {
-                Entity to = graph.getEntityByIndex(e.to());
-                if (to == null) continue;
-
-                boolean artistToContent = (from instanceof Artist) && (to instanceof Content);
-                boolean contentToArtist = (from instanceof Content) && (to instanceof Artist);
-                if (!artistToContent && !contentToArtist) continue;
-
-                temp.addEdge(new DirectedEdge(e.from(), e.to(), e.weight()));
-                temp.addEdge(new DirectedEdge(e.to(), e.from(), e.weight()));
-            }
-        }
-
-        return dijkstraPath(temp, artistId1, artistId2);
+        return dijkstraPath(graph.getGraph(), artistId1, artistId2);
     }
 
     // ========================= R8c) CONECTIVIDADE =========================
@@ -175,7 +153,6 @@ public class GraphAlgorithms {
     public boolean isConnected(StreamingGraph subgraph) {
         if (subgraph.vertexCount() <= 1) return true;
         Map<Integer, Entity> entities = subgraph.getIndexToEntity();
-        if (entities.isEmpty()) return true;
         // Criar dígrafo bidirecional (ignorar direções = conectividade fraca)
         Digraph undirected = new Digraph(subgraph.getGraph().V());
         for (int v = 0; v < subgraph.getGraph().V(); v++) {
@@ -242,6 +219,7 @@ public class GraphAlgorithms {
         return computeStats(i ->
                 genreName != null
                         && i.getType() == InteractionType.WATCH
+                        && i.getContent() != null
                         && i.getContent().getGenre() != null
                         && genreName.equalsIgnoreCase(i.getContent().getGenre().getName())
                         && inRange(i.getTimestamp(), start, end));
@@ -251,6 +229,7 @@ public class GraphAlgorithms {
     private Map<String, Double> computeStats(java.util.function.Predicate<Interaction> filter) {
         double total = 0, sumRating = 0, sumWatched = 0;
         for (Interaction i : graph.getInteractions()) {
+            if (i.getContent() == null) continue;
             if (!filter.test(i)) continue;
             total++;
             sumRating += i.getRating();
@@ -302,6 +281,7 @@ public class GraphAlgorithms {
         // Verificar quais viram o conteúdo no intervalo
         for (Interaction i : graph.getInteractions()) {
             if (i.getType() != InteractionType.WATCH) continue;
+            if (i.getContent() == null) continue;
             if (!contentId.equals(i.getContent().getId())) continue;
             if (!followerIds.contains(i.getUser().getId())) continue;
             if (!inRange(i.getTimestamp(), start, end)) continue;
@@ -309,6 +289,8 @@ public class GraphAlgorithms {
         }
         return result;
     }
+
+    // ========================= HELPER =========================
 
     /** Verifica se um timestamp está dentro do intervalo [start, end]. Nulls são ignorados. */
     private boolean inRange(LocalDateTime ts, LocalDateTime start, LocalDateTime end) {
