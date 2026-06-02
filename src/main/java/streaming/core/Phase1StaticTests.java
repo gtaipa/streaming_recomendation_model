@@ -392,11 +392,12 @@ public final class Phase1StaticTests {
         long nFCount = subN.stream().filter(a -> containsArtistId(genF, a.getId())).count();
         assertTrue("R3d | substring 'n' AND gender F: so A3 (count==1)", nFCount == 1, print);
 
-        // Substring AND intervalo de nascimento
+        // Substring AND intervalo de nascimento ("nol" so apanha A1=Nolan; Villeneuve nao contem "nol")
+        List<Artist> subNol = db.searchArtistsByNameSubstring("nol");
         List<Artist> born60s70s = db.searchArtistsBornBetween(
                 LocalDate.of(1960, 1, 1), LocalDate.of(1979, 12, 31));
-        long nBornCount = subN.stream().filter(a -> containsArtistId(born60s70s, a.getId())).count();
-        assertTrue("R3d | substring 'n' AND 1960-1979: so A1 (Nolan 1970)", nBornCount == 1, print);
+        long nolBornCount = subNol.stream().filter(a -> containsArtistId(born60s70s, a.getId())).count();
+        assertTrue("R3d | substring 'nol' AND 1960-1979: so A1 (Nolan 1970)", nolBornCount == 1, print);
     }
 
     // =========================================================================
