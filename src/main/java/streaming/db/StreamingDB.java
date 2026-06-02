@@ -80,19 +80,49 @@ public class StreamingDB {
 
     /**
      * Adds a user to the database. If the ID exists, the old user is deindexed and replaced.
+     * Uses ID-based BST scan to handle the case where the caller mutated the object
+     * in-place before calling this method (same reference in ST and argument).
+     *
      * @param newUser the user to add
      */
     public void addUser(User newUser) {
         if (newUser == null || newUser.getId() == null) return;
 
-        // if the user already exists, remove the old entry from all BST indices first
         if (users.contains(newUser.getId())) {
-            User oldUser = users.get(newUser.getId());
-            removeUserFromIndices(oldUser);
+            removeUserFromIndicesById(newUser.getId());
         }
 
         users.put(newUser.getId(), newUser);
         addUserToIndices(newUser);
+    }
+
+    /**
+     * Removes a user from all BST indices by scanning each index for the user's ID.
+     * Safe even when the user object has been mutated in-place before this call,
+     * because it does not rely on the object's current field values to locate the entry.
+     *
+     * @param userId the ID of the user to remove from all indices
+     */
+    private void removeUserFromIndicesById(String userId) {
+        List<String> regionKeys = new ArrayList<>();
+        for (String k : this.usersByRegion.keys()) regionKeys.add(k);
+        for (String k : regionKeys) {
+            List<User> list = this.usersByRegion.get(k);
+            if (list != null) {
+                list.removeIf(u -> u.getId().equals(userId));
+                if (list.isEmpty()) this.usersByRegion.delete(k);
+            }
+        }
+
+        List<ChronoLocalDate> dateKeys = new ArrayList<>();
+        for (ChronoLocalDate d : this.usersByRegistrationDate.keys()) dateKeys.add(d);
+        for (ChronoLocalDate d : dateKeys) {
+            List<User> list = this.usersByRegistrationDate.get(d);
+            if (list != null) {
+                list.removeIf(u -> u.getId().equals(userId));
+                if (list.isEmpty()) this.usersByRegistrationDate.delete(d);
+            }
+        }
     }
 
     /**
