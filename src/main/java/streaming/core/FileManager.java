@@ -217,7 +217,7 @@ public class FileManager {
     switch (d[0]) {
       case "GENRE" -> parseGenre(d, db);
       case "ARTIST" -> parseArtist(d, db);
-      case "MOVIE" -> parseMovie(d, db);
+      case "MOVIE" -> parseMovie(d, db, api);
       case "SERIES" -> parseSeries(d, db);
       case "EPISODE" -> parseEpisode(d, db);
       case "USER" -> parseUser(d, db);
@@ -242,7 +242,7 @@ public class FileManager {
     db.addArtist(a);
   }
 
-  private void parseMovie(String[] d, StreamingDB db) {
+  private void parseMovie(String[] d, StreamingDB db, StreamingGraphAPI api) {
     // MOVIE;id;createdAt;title;releaseYear;genreId;region;duration;directorId
     LocalDateTime createdAt = LocalDateTime.parse(d[2]);
     Genre genre = d[5].isEmpty() ? null : db.getGenre(d[5]);
@@ -251,6 +251,7 @@ public class FileManager {
     Artist director = d[8].isEmpty() ? null : db.getArtist(d[8]);
     Movie m = new Movie(d[1], createdAt, d[3], releaseYear, genre, d[6], duration, director);
     db.addContent(m);
+    if (director != null) api.addArtistToContent(director.getId(), m.getId());
   }
 
   private void parseSeries(String[] d, StreamingDB db) {
