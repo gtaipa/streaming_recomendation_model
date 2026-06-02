@@ -22,7 +22,6 @@ import streaming.db.StreamingGraph;
 import streaming.db.StreamingGraphAPI;
 import streaming.model.*;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -112,7 +111,8 @@ public class StreamingGUI extends Application {
         api = new StreamingGraphAPI(db, graph);
         alg = new GraphAlgorithms(graph, db);
         idGen = new IdGenerator();
-        populateDemoData();
+        new FileManager().importTxt("streaming_db.txt", db, api);
+        api.registerAllEntities();
 
         stage.setTitle("Streaming Recommendation & Graph Engine");
         root = new BorderPane();
@@ -661,46 +661,6 @@ public class StreamingGUI extends Application {
         curve.setFill(null); curve.setStroke(cor); curve.setStrokeWidth(2);
         curve.getStrokeDashArray().addAll(4d, 4d);
         graphPane.getChildren().add(curve);
-    }
-
-    // =====================================================================
-    // DADOS DEMO
-    // =====================================================================
-
-    /** Popula o sistema com dados de demonstracao (com passwords reais). */
-    private void populateDemoData() {
-        Genre scifi = new Genre(idGen.nextGenreId(), "Sci-Fi");
-        Genre action = new Genre(idGen.nextGenreId(), "Ação");
-        db.addGenre(scifi); db.addGenre(action);
-
-        Artist nolan = new Artist(idGen.nextArtistId(), LocalDateTime.now(),
-                "Christopher Nolan", "UK", LocalDate.of(1970, 7, 30), "M");
-        Artist dicaprio = new Artist(idGen.nextArtistId(), LocalDateTime.now(),
-                "Leonardo DiCaprio", "US", LocalDate.of(1974, 11, 11), "M");
-        db.addArtist(nolan); db.addArtist(dicaprio);
-
-        Movie m1 = new Movie(idGen.nextContentId(), LocalDateTime.now(),
-                "Inception", 2010, scifi, "Global", 148, nolan);
-        Movie m2 = new Movie(idGen.nextContentId(), LocalDateTime.now(),
-                "Interstellar", 2014, scifi, "Global", 169, nolan);
-        db.addContent(m1); db.addContent(m2);
-
-        // Passwords guardadas como hash SHA-256 (login compara hashes)
-        User u1 = new User(idGen.nextUserId(), LocalDateTime.now(), "tiago_silva", "tiago@ufp.pt", hashPassword("1234"));
-        u1.setRegion("Norte"); u1.setRegistrationDate(LocalDate.of(2026, 1, 15));
-        User u2 = new User(idGen.nextUserId(), LocalDateTime.now(), "maria_gomes", "maria@ufp.pt", hashPassword("1234"));
-        u2.setRegion("Norte"); u2.setRegistrationDate(LocalDate.of(2026, 2, 20));
-        User u3 = new User(idGen.nextUserId(), LocalDateTime.now(), "nuno_vaz", "nuno@ufp.pt", hashPassword("1234"));
-        u3.setRegion("Sul"); u3.setRegistrationDate(LocalDate.of(2026, 3, 10));
-        db.addUser(u1); db.addUser(u2); db.addUser(u3);
-
-        api.registerAllEntities();
-        api.addWatch(u1.getId(), m1.getId(), 100, 9.0);
-        api.addWatch(u2.getId(), m1.getId(), 80, 7.5);
-        api.addRating(u3.getId(), m2.getId(), 10.0);
-        api.addFollow(u1.getId(), u2.getId());
-        api.addArtistToContent(nolan.getId(), m1.getId());
-        api.addArtistToContent(nolan.getId(), m2.getId());
     }
 
     // =====================================================================
