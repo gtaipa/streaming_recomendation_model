@@ -345,7 +345,7 @@ public final class Phase2StaticTests {
         check("R10 | U1 region Porto",       "Porto".equals(db2.getUser("U1").getRegion()));
         check("R10 | Grafo vertices",        graph2.vertexCount() > 0);
         check("R10 | Grafo arestas",         graph2.edgeCount() > 0);
-        check("R10 | 3 interacoes",          graph2.getInteractions().size() == 3);
+        check("R10 | 4 interacoes",          graph2.getInteractions().size() == 4);
         check("R10 | U1 segue U2",           db2.getUser("U1").getFollowing().size() == 1);
     }
 
@@ -383,7 +383,7 @@ public final class Phase2StaticTests {
         check("R11 | U1 region Porto",       "Porto".equals(db2.getUser("U1").getRegion()));
         check("R11 | Grafo vertices",        graph2.vertexCount() > 0);
         check("R11 | Grafo arestas",         graph2.edgeCount() > 0);
-        check("R11 | 3 interacoes",          graph2.getInteractions().size() == 3);
+        check("R11 | 4 interacoes",          graph2.getInteractions().size() == 4);
         check("R11 | U1 segue U2",           db2.getUser("U1").getFollowing().size() == 1);
     }
 
