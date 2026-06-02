@@ -1,193 +1,221 @@
-package streaming.model; // Declara que esta classe pertence ao pacote 'streaming.model', que agrupa todas as classes de modelo da aplicação.
+package streaming.model; // Declara que esta classe pertence ao pacote streaming.model
 
-import java.time.LocalDate; // Importa a classe LocalDate para representar datas (apenas dia, mês e ano).
-import java.time.LocalDateTime; // Importa a classe LocalDateTime para representar datas e horas com precisão.
-import java.util.ArrayList; // Importa a classe ArrayList para criar listas dinâmicas de objetos.
-import java.util.List; // Importa a interface List, que define uma coleção ordenada de elementos.
+import java.time.LocalDate; // Importa a classe que representa datas simples (apenas ano, mes e dia, sem hora)
+import java.time.LocalDateTime; // Importa a classe que representa data e hora juntas (ano, mes, dia, hora, minuto, segundo)
+import java.util.ArrayList; // Importa a classe que cria listas dinamicas que crescem conforme necessario
+import java.util.List; // Importa a interface que define o comportamento de uma lista ordenada de elementos
 
 /**
  * Representa um utilizador da plataforma de streaming.
- * <p>
- * Esta classe armazena dados de perfil, credenciais de segurança (hash da password) e relacionamentos sociais (seguidores).
- * A maioria das operações possui complexidade de tempo O(1), exceto as verificações em listas,
- * que podem ter complexidade linear (O(n)) em relação ao tamanho da coleção.
  */
-public class User extends Entity { // A classe User estende Entity, herdando atributos e métodos base para entidades do sistema.
+/*
+ * DICIONARIO:
+ * - class: modelo que define a estrutura e comportamento de um objeto
+ * - extends: palavra-chave que indica heranca; User herda os atributos e metodos de Entity
+ * - Entity: classe pai que fornece id e createdAt
+ * - private: nivel de acesso que so permite acesso dentro desta propria classe
+ * - String: tipo de dados que guarda texto
+ * - LocalDate: tipo que guarda uma data sem hora (ex: 2024-03-15)
+ * - List: colecao ordenada de elementos que pode crescer dinamicamente
+ * - ArrayList: implementacao concreta de List baseada num array que cresce automaticamente
+ * - Genre: classe que representa um genero de conteudo (ex: Acao, Drama)
+ * - User: classe que representa outro utilizador, usado para relacoes de seguimento
+ */
+public class User extends Entity { // Define a classe User que herda de Entity, representando um utilizador da plataforma
 
-    /** Nome de utilizador único da conta. */
-    private String username; // Armazena o nome de utilizador.
+    /** Nome de utilizador unico da conta. */
+    private String username; // Guarda o nome de utilizador unico desta conta
 
-    /** Endereço de email do utilizador. */
-    private String email; // Armazena o endereço de email do utilizador.
+    /** Endereco de email do utilizador. */
+    private String email; // Guarda o endereco de email do utilizador
 
     /** Hash seguro da password do utilizador. */
-    private String passwordHash; // Armazena o hash da password, nunca a password em texto simples, por segurança.
+    private String passwordHash; // Guarda o hash da password; nunca a password em texto simples, por seguranca
 
-    /** Região geográfica do utilizador (ex.: PT, US). */
-    private String region; // Armazena a região do utilizador.
+    /** Regiao geografica do utilizador (ex.: PT, US). */
+    private String region; // Guarda a regiao geografica do utilizador
 
     /** Data em que o utilizador se registou na plataforma. */
-    private LocalDate registrationDate; // Armazena a data de registo do utilizador.
+    private LocalDate registrationDate; // Guarda a data em que o utilizador se registou na plataforma
 
-    /** Lista de géneros preferidos pelo utilizador. */
-    private List<Genre> preferences; // Contém os géneros de conteúdo que o utilizador prefere.
+    /** Lista de generos preferidos pelo utilizador. */
+    private List<Genre> preferences; // Guarda a lista de generos de conteudo que o utilizador prefere
 
     /** Lista de outros utilizadores que este utilizador segue. */
-    private List<User> following; // Contém referências aos utilizadores que são seguidos.
+    private List<User> following; // Guarda a lista de utilizadores que este utilizador segue
 
     /**
-     * Construtor para criar uma nova instância de utilizador.
-     * <p>
-     * Complexidade: {@code O(1)}.
+     * Cria um novo utilizador com os dados basicos de autenticacao.
      *
-     * @param id identificador único do utilizador
-     * @param createdAt data e hora de criação do registo do utilizador
+     * @param id identificador unico do utilizador
+     * @param createdAt data e hora de criacao do registo
      * @param username nome de utilizador
-     * @param email endereço de email do utilizador
+     * @param email endereco de email do utilizador
      * @param passwordHash hash da password do utilizador
      */
-    public User(String id, LocalDateTime createdAt, String username, String email, String passwordHash) {
-        // Chama o construtor da classe pai (Entity) para inicializar o ID e a data de criação.
-        super(id, createdAt);
-        this.username = username; // Atribui o nome de utilizador fornecido.
-        this.email = email; // Atribui o endereço de email fornecido.
-        this.passwordHash = passwordHash; // Atribui o hash da password fornecido.
-        // Inicializa as listas de preferências e seguidores como vazias para evitar NullPointerExceptions.
-        this.preferences = new ArrayList<>();
-        this.following = new ArrayList<>();
-    }
+    /*
+     * DICIONARIO:
+     * - construtor: metodo especial que e chamado quando se cria um novo objeto; inicializa os atributos
+     * - super: chamada ao construtor da classe pai (Entity) para inicializar id e createdAt
+     * - this: referencia ao proprio objeto que esta a ser criado
+     * - new ArrayList<>(): cria uma nova lista vazia pronta a receber elementos
+     */
+    public User(String id, LocalDateTime createdAt, String username, String email, String passwordHash) { // Construtor que cria um novo utilizador com os dados basicos de autenticacao
+        super(id, createdAt); // Chama o construtor da classe pai Entity para guardar o id e a data de criacao
+        this.username = username; // Guarda o nome de utilizador recebido no atributo username
+        this.email = email; // Guarda o endereco de email recebido no atributo email
+        this.passwordHash = passwordHash; // Guarda o hash da password recebido no atributo passwordHash
+        this.preferences = new ArrayList<>(); // Inicializa a lista de preferencias como vazia
+        this.following = new ArrayList<>(); // Inicializa a lista de seguidos como vazia
+    } // Fim do construtor
 
     /**
-     * Permite a este utilizador seguir outro utilizador, caso ainda não o esteja a seguir.
-     * <p>
-     * Complexidade: {@code O(n)} no pior caso, devido à verificação {@link List#contains(Object)}
-     * que percorre a lista de utilizadores seguidos.
+     * Permite a este utilizador seguir outro utilizador, caso ainda nao o esteja a seguir.
      *
      * @param u o utilizador a ser seguido
      */
-    public void follow(User u) {
-        // Verifica se o utilizador a seguir não é nulo e se ainda não está na lista de 'following' para evitar duplicações.
-        if (u != null && !this.following.contains(u)) {
-            this.following.add(u); // Adiciona o utilizador à lista de seguidos.
-        }
-    }
+    /*
+     * DICIONARIO:
+     * - contains: metodo de List que verifica se um elemento ja existe na lista
+     * - add: metodo de List que adiciona um elemento no fim da lista
+     * - null: valor especial que representa a ausencia de objeto
+     */
+    public void follow(User u) { // Metodo que adiciona um utilizador a lista de seguidos, evitando duplicados
+        if (u != null && !this.following.contains(u)) { // Verifica se o utilizador nao e null e ainda nao esta na lista
+            this.following.add(u); // Adiciona o utilizador a lista de seguidos
+        } // Fim da verificacao
+    } // Fim do metodo follow
 
     /**
-     * Retorna a lista de utilizadores que este utilizador está a seguir.
+     * Devolve a lista de utilizadores que este utilizador esta a seguir.
      *
-     * @return uma lista de objetos User que representa os utilizadores seguidos.
+     * @return lista de utilizadores seguidos
      */
-    public List<User> getFollowing() {
-        return following; // Devolve a lista de utilizadores atualmente seguidos.
-    }
+    /*
+     * DICIONARIO:
+     * - getter: metodo que devolve o valor de um atributo privado
+     * - return: palavra-chave que devolve um valor ao codigo que chamou este metodo
+     */
+    public List<User> getFollowing() { // Metodo getter que devolve a lista de utilizadores seguidos
+        return following; // Devolve a lista de utilizadores que este utilizador esta a seguir
+    } // Fim do metodo getFollowing
 
     /**
-     * Retorna a lista de géneros de conteúdo preferidos por este utilizador.
+     * Devolve a lista de generos preferidos pelo utilizador.
      *
-     * @return uma lista de objetos Genre que representa as preferências do utilizador.
+     * @return lista de generos preferidos
      */
-    public List<Genre> getPreferences() {
-        return preferences; // Devolve a lista de géneros preferidos.
-    }
+    public List<Genre> getPreferences() { // Metodo getter que devolve a lista de generos preferidos
+        return preferences; // Devolve a lista de generos preferidos pelo utilizador
+    } // Fim do metodo getPreferences
 
     /**
-     * Retorna o hash da password do utilizador.
+     * Devolve o hash da password do utilizador.
      *
-     * @return uma String contendo o hash da password.
+     * @return hash da password
      */
-    public String getPasswordHash() {
-        return passwordHash; // Devolve o hash seguro da password.
-    }
+    public String getPasswordHash() { // Metodo getter que devolve o hash da password
+        return passwordHash; // Devolve o hash seguro da password
+    } // Fim do metodo getPasswordHash
 
     /**
-     * Retorna o nome de utilizador.
+     * Devolve o nome de utilizador.
      *
-     * @return uma String contendo o nome de utilizador.
+     * @return nome de utilizador
      */
-    public String getUsername() {
-        return username; // Devolve o nome de utilizador.
-    }
+    public String getUsername() { // Metodo getter que devolve o nome de utilizador
+        return username; // Devolve o nome de utilizador
+    } // Fim do metodo getUsername
 
     /**
      * Define um novo nome de utilizador para esta conta.
      *
-     * @param username o novo nome de utilizador a ser definido.
+     * @param username o novo nome de utilizador a ser definido
      */
-    public void setUsername(String username) {
-        this.username = username; // Atualiza o nome de utilizador com o valor fornecido.
-    }
+    /*
+     * DICIONARIO:
+     * - setter: metodo que atualiza o valor de um atributo
+     */
+    public void setUsername(String username) { // Metodo setter que atualiza o nome de utilizador
+        this.username = username; // Substitui o nome de utilizador pelo valor recebido
+    } // Fim do metodo setUsername
 
     /**
-     * Retorna o endereço de email do utilizador.
+     * Devolve o endereco de email do utilizador.
      *
-     * @return uma String contendo o endereço de email.
+     * @return endereco de email
      */
-    public String getEmail() {
-        return email; // Devolve o endereço de email do utilizador.
-    }
+    public String getEmail() { // Metodo getter que devolve o endereco de email
+        return email; // Devolve o endereco de email do utilizador
+    } // Fim do metodo getEmail
 
     /**
-     * Define um novo endereço de email para esta conta.
+     * Define um novo endereco de email para esta conta.
      *
-     * @param email o novo endereço de email a ser definido.
+     * @param email o novo endereco de email a ser definido
      */
-    public void setEmail(String email) {
-        this.email = email; // Atualiza o endereço de email com o valor fornecido.
-    }
+    public void setEmail(String email) { // Metodo setter que atualiza o endereco de email
+        this.email = email; // Substitui o endereco de email pelo valor recebido
+    } // Fim do metodo setEmail
 
     /**
      * Define um novo hash da password para o utilizador.
      *
-     * @param passwordHash o novo hash da password a ser definido.
+     * @param passwordHash o novo hash da password a ser definido
      */
-    public void setPasswordHash(String passwordHash) {
-        this.passwordHash = passwordHash; // Atualiza o hash da password com o valor fornecido.
-    }
+    public void setPasswordHash(String passwordHash) { // Metodo setter que atualiza o hash da password
+        this.passwordHash = passwordHash; // Substitui o hash da password pelo valor recebido
+    } // Fim do metodo setPasswordHash
 
     /**
-     * Retorna a região geográfica do utilizador.
+     * Devolve a regiao geografica do utilizador.
      *
-     * @return uma String contendo a região do utilizador.
+     * @return regiao do utilizador
      */
-    public String getRegion() {
-        return region; // Devolve a região do utilizador.
-    }
+    public String getRegion() { // Metodo getter que devolve a regiao geografica do utilizador
+        return region; // Devolve a regiao do utilizador
+    } // Fim do metodo getRegion
 
     /**
-     * Define a região geográfica do utilizador.
+     * Define a regiao geografica do utilizador.
      *
-     * @param region a nova região a ser definida.
+     * @param region a nova regiao a ser definida
      */
-    public void setRegion(String region) {
-        this.region = region; // Atualiza a região do utilizador com o valor fornecido.
-    }
+    public void setRegion(String region) { // Metodo setter que atualiza a regiao do utilizador
+        this.region = region; // Substitui a regiao pelo valor recebido
+    } // Fim do metodo setRegion
 
     /**
-     * Retorna a data de registo do utilizador.
+     * Devolve a data de registo do utilizador.
      *
-     * @return um objeto LocalDate representando a data de registo.
+     * @return data de registo
      */
-    public LocalDate getRegistrationDate() {
-        return registrationDate; // Devolve a data de registo.
-    }
+    public LocalDate getRegistrationDate() { // Metodo getter que devolve a data de registo do utilizador
+        return registrationDate; // Devolve a data de registo
+    } // Fim do metodo getRegistrationDate
 
     /**
      * Define uma nova data de registo para o utilizador.
-     * Geralmente usado em operações de administração ou testes.
      *
-     * @param registrationDate a nova data de registo a ser definida.
+     * @param registrationDate a nova data de registo a ser definida
      */
-    public void setRegistrationDate(LocalDate registrationDate) {
-        this.registrationDate = registrationDate; // Atualiza a data de registo com o valor fornecido.
-    }
+    public void setRegistrationDate(LocalDate registrationDate) { // Metodo setter que atualiza a data de registo
+        this.registrationDate = registrationDate; // Substitui a data de registo pelo valor recebido
+    } // Fim do metodo setRegistrationDate
 
     /**
-     * Representação textual do utilizador.
+     * Devolve uma representacao textual do utilizador.
      *
-     * @return texto resumido do utilizador
+     * @return texto com o nome de utilizador e o email
      */
-    @Override // ♻️ Reescrevemos a função de criar texto que já vem por defeito.
-    public String toString() { // 🖨️ A cena de "print" num formato bonitinho.
-        return "User:" + username + ",E-mail:" + email; // 📝 Manda a string "User: o-teu-nome, E-mail: o-teu-email". Simples e direto.
-    } // 🚪 E acabámos com o Utilizador! Adeus!
-} // 🛑 Fim da classe User.
+    /*
+     * DICIONARIO:
+     * - Override: anotacao que indica que estamos a redefinir o metodo toString herdado da classe Object
+     * - toString: metodo que converte o objeto numa representacao em texto legivel
+     */
+    @Override // Indica que estamos a redefinir o metodo toString herdado da classe Object
+    public String toString() { // Metodo que devolve uma representacao textual compacta do utilizador
+        return "User:" + username + ",E-mail:" + email; // Constroi e devolve uma string com o nome e o email do utilizador
+    } // Fim do metodo toString
+
+} // Fim da classe User
