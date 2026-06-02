@@ -1,112 +1,150 @@
-package streaming.model; // 📁 Como de costume, vai tudo para a pasta 'streaming.model'.
+package streaming.model; // Declara que esta classe pertence ao pacote streaming.model
 
-import java.time.LocalDateTime; // 🕒 O clássico import das horinhas.
-import java.util.ArrayList; // 📦 O nosso criador de listas vazias.
-import java.util.List; // 📚 A cena das listas.
+import java.time.LocalDateTime; // Importa a classe que representa data e hora juntas (ano, mes, dia, hora, minuto, segundo)
+import java.util.ArrayList; // Importa a classe que implementa listas dinamicas que crescem automaticamente
+import java.util.List; // Importa a interface que define o contrato de uma lista ordenada de elementos
 
 /**
- * Série, isto é, conteúdo com temporadas, episódios e estado.
+ * Representa uma serie da plataforma, com temporadas, episodios e estado.
  */
-public class Series extends Content { // 🏗️ Criamos a classe Series, que também é filha do grande "Content".
+/*
+ * DICIONARIO:
+ * - class: modelo que define a estrutura e comportamento de um objeto
+ * - extends: palavra-chave que indica que esta classe herda atributos e metodos de outra classe
+ * - Content: classe pai que contem os campos comuns a todos os tipos de conteudo
+ * - Series: nome desta classe; representa uma serie televisiva com episodios e estado
+ * - private: nivel de acesso que so permite acesso dentro desta propria classe
+ * - int: tipo de dados para numeros inteiros
+ * - List: colecao ordenada de elementos que pode crescer dinamicamente
+ * - SeriesStatus: enum que representa o estado atual da serie (ONGOING, ENDED, CANCELLED)
+ * - Episode: classe que representa um episodio individual da serie
+ */
+public class Series extends Content { // Define a classe Series que herda de Content, representando uma serie televisiva
 
-  /** Número de temporadas. */
-  private int seasons; // 📺 Quantas temporadas tem esta brincadeira?
+  /** Numero de temporadas da serie. */
+  private int seasons; // Guarda o numero total de temporadas desta serie
 
-  /** Episódios da série. */
-  private List<Episode> episodes; // 🎬 A lista gigante de episódios para maratonar.
+  /** Lista de episodios da serie. */
+  private List<Episode> episodes; // Guarda a lista de todos os episodios desta serie
 
-  /** Estado da série. */
-  private SeriesStatus status; // 🏁 Está a dar, acabou ou foi cancelada? (Lembras-te do Enum?)
-
-  /**
-   * Cria uma série.
-   * <p>
-   * Complexidade: {@code O(1)}.
-   *
-   * @param id identificador único
-   * @param createdAt data/hora de criação
-   * @param title título
-   * @param releaseYear ano de lançamento
-   * @param genre género
-   * @param region região
-   * @param seasons número de temporadas
-   * @param status estado da série
-   */
-  public Series (String id, LocalDateTime createdAt, String title, int releaseYear, Genre genre, String region, int seasons, SeriesStatus status) { // 🏭 Construtor, onde montamos a série inteira.
-    // Reutiliza os campos comuns do conteúdo base.
-    super(id, createdAt, title, releaseYear, genre, region, 0.0, 0, new ArrayList<>()); // 🚀 Chama a fábrica do pai (Content) para tratar das tretas habituais, nota a zero, etc.
-    this.seasons = seasons; // 📺 Guarda o número de temporadas.
-    this.status = status; // 🏁 Guarda o estado atual da série.
-    // Lista de episódios guardada em memória e inicialmente vazia.
-    this.episodes = new ArrayList<>(); // 📦 Deixa a lista de episódios vazia, pronta para levar com a maratona.
-  } // 🚪 Construtor fechado.
+  /** Estado atual da serie. */
+  private SeriesStatus status; // Guarda o estado atual da serie (em producao, terminada ou cancelada)
 
   /**
-   * Devolve o número de temporadas.
+   * Cria uma serie com os seus dados essenciais.
    *
-   * @return número de temporadas
+   * @param id identificador unico da serie
+   * @param createdAt data e hora de criacao
+   * @param title titulo da serie
+   * @param releaseYear ano de lancamento
+   * @param genre genero da serie
+   * @param region regiao associada a serie
+   * @param seasons numero de temporadas
+   * @param status estado atual da serie
    */
-  public int getSeasons() { // 📥 Tem quantas seasons?
-    return seasons; // 📤 Toma lá a info.
-  } // 🚪 Fim.
+  /*
+   * DICIONARIO:
+   * - construtor: metodo especial chamado quando se cria um novo objeto
+   * - super: chamada ao construtor da classe pai (Content) para inicializar os campos herdados
+   * - this: referencia ao objeto atual que esta a ser criado
+   * - new ArrayList<>(): cria uma nova lista vazia pronta a receber elementos
+   * - 0.0: valor inicial para a classificacao media (zero porque a serie e nova)
+   * - 0: valor inicial para o total de visualizacoes (zero porque a serie e nova)
+   */
+  public Series(String id, LocalDateTime createdAt, String title, int releaseYear, Genre genre, String region, int seasons, SeriesStatus status) { // Construtor que cria uma nova serie com todos os seus dados essenciais
+    super(id, createdAt, title, releaseYear, genre, region, 0.0, 0, new ArrayList<>()); // Chama o construtor da classe pai Content com valores iniciais para nota e visualizacoes
+    this.seasons = seasons; // Guarda o numero de temporadas recebido como parametro
+    this.status = status; // Guarda o estado da serie recebido como parametro
+    this.episodes = new ArrayList<>(); // Inicializa a lista de episodios como vazia; os episodios sao adicionados depois
+  } // Fim do construtor
 
   /**
-   * Devolve o estado da série.
+   * Devolve o numero de temporadas da serie.
    *
-   * @return estado da série
+   * @return numero de temporadas
    */
-  public SeriesStatus getStatus() { // 📥 Ainda está no ar?
-    return status; // 📤 Dá o estado (Ended, Ongoing, etc).
-  } // 🚪 Fim.
+  /*
+   * DICIONARIO:
+   * - getter: metodo que devolve o valor de um atributo privado
+   * - return: palavra-chave que devolve um valor ao codigo que chamou este metodo
+   */
+  public int getSeasons() { // Metodo getter que devolve o numero de temporadas da serie
+    return seasons; // Devolve o valor do atributo seasons
+  } // Fim do metodo getSeasons
 
   /**
-   * Devolve a lista de episódios.
+   * Devolve o estado atual da serie.
    *
-   * @return lista de episódios
+   * @return estado da serie
    */
-  public List<Episode> getEpisodes() { // 📥 Quero ver os episódios todos!
-    return episodes; // 📤 Toma lá a lista cheia deles.
-  } // 🚪 Fim.
+  public SeriesStatus getStatus() { // Metodo getter que devolve o estado atual da serie
+    return status; // Devolve o valor do atributo status
+  } // Fim do metodo getStatus
 
   /**
-   * Adiciona um episódio se ainda não existir um com o mesmo número.
-   * <p>
-   * Complexidade: {@code O(n)} no pior caso, porque percorre a lista de episódios.
+   * Devolve a lista de episodios da serie.
    *
-   * @param e episódio a adicionar
+   * @return lista de episodios
    */
-  public void addEpisode(Episode e) { // 🔄 Função para meter um episódio novo na série.
-    // Procuramos manualmente para evitar duplicados por número de episódio.
-    for (Episode episode : episodes) { // 🕵️ Vai dar uma volta pelos episódios que já lá estão...
-      if (episode.getEpisodeNumber() == e.getEpisodeNumber()) { // ⚠️ Se encontrar um com o mesmo número (tipo o episódio 5 a querer entrar 2 vezes)...
-        return; // 🛑 Baza da função! Não mete cenas repetidas aqui.
-      }
-    }
-    // Se não houver duplicado, a referência é guardada na lista.
-    episodes.add(e); // ✅ Se não houver estrilho, adiciona o episódio à vontade.
-  } // 🚪 Fim da função.
+  public List<Episode> getEpisodes() { // Metodo getter que devolve a lista de episodios da serie
+    return episodes; // Devolve a lista de episodios
+  } // Fim do metodo getEpisodes
 
   /**
-   * Devolve o tipo de conteúdo.
+   * Adiciona um episodio a serie se ainda nao existir um com o mesmo numero.
+   * Complexidade: O(n) no pior caso, porque percorre a lista de episodios.
    *
-   * @return {@code Series}
+   * @param e episodio a adicionar
    */
-  @Override // ♻️ Sobrescreve o tipo de conteúdo do Content genérico.
-  public String getContentType() { // 📥 Que tipo de cena é esta?
-    return "Series"; // 📤 "Sou uma série bro!"
-  } // 🚪 Fim.
+  /*
+   * DICIONARIO:
+   * - for-each: ciclo que percorre todos os elementos de uma colecao um a um
+   * - return: sai do metodo imediatamente sem adicionar o episodio duplicado
+   * - getEpisodeNumber: metodo de Episode que devolve o numero do episodio
+   * - add: metodo da interface List que adiciona um elemento no fim da lista
+   */
+  public void addEpisode(Episode e) { // Metodo que adiciona um episodio a lista da serie, evitando duplicados
+    for (Episode episode : episodes) { // Percorre todos os episodios ja existentes na lista
+      if (episode.getEpisodeNumber() == e.getEpisodeNumber()) { // Verifica se ja existe um episodio com o mesmo numero
+        return; // Se encontrar um duplicado, sai do metodo sem adicionar
+      } // Fim da verificacao de duplicado
+    } // Fim do ciclo de verificacao
+    episodes.add(e); // Se nao houver duplicado, adiciona o episodio no fim da lista
+  } // Fim do metodo addEpisode
 
   /**
-   * Devolve detalhes da série para exibição.
+   * Devolve o tipo de conteudo.
    *
-   * @return descrição curta da série
+   * @return a string {@code Series}
    */
-  @Override // ♻️ Dá-nos os detalhes à maneira das Séries.
-  public String getDetails() { // 📥 Detalhes faz favor?
-    // Protegemos a saída contra null para evitar exceções na UI.
-    int epCount = (episodes == null) ? 0 : episodes.size(); // 🛡️ Se a lista for nula (tipo, deu barraca) dizemos que tem 0, senão conta o tamanho real.
-    String safeStatus = (status == null) ? "Unknown" : status.toString(); // 🛡️ Se o estado for nulo (ninguém sabe), manda "Unknown". Se não manda o estado real.
-    return "Seasons: " + seasons + ", Episodes: " + epCount + ", Status: " + safeStatus; // 📝 E pimba, monta o texto bonito final!
-  } // 🚪 Fim dos detalhes.
+  /*
+   * DICIONARIO:
+   * - Override: anotacao que indica que estamos a redefinir um metodo herdado da classe pai
+   * - getContentType: metodo abstrato definido em Content que e aqui implementado
+   */
+  @Override // Indica que estamos a redefinir o metodo abstrato getContentType herdado de Content
+  public String getContentType() { // Metodo que identifica este conteudo como sendo do tipo serie
+    return "Series"; // Devolve a string que identifica este objeto como uma serie
+  } // Fim do metodo getContentType
 
-} // 🛑 Acabou a série. Próximo!
+  /**
+   * Devolve detalhes da serie para apresentacao.
+   *
+   * @return descricao com numero de temporadas, episodios e estado
+   */
+  /*
+   * DICIONARIO:
+   * - Override: anotacao que indica que estamos a redefinir um metodo herdado
+   * - operador ternario: expressao da forma (condicao) ? valorSeVerdadeiro : valorSeFalso
+   * - null: valor especial que representa a ausencia de objeto
+   * - size(): metodo de List que devolve o numero de elementos na lista
+   * - toString(): metodo que converte o objeto do enum numa representacao em texto
+   */
+  @Override // Indica que estamos a redefinir o metodo abstrato getDetails herdado de Content
+  public String getDetails() { // Metodo que devolve os detalhes especificos desta serie
+    int epCount = (episodes == null) ? 0 : episodes.size(); // Se a lista de episodios for null usa 0; caso contrario conta os episodios reais
+    String safeStatus = (status == null) ? "Unknown" : status.toString(); // Se o estado for null usa "Unknown"; caso contrario usa o valor real do enum
+    return "Seasons: " + seasons + ", Episodes: " + epCount + ", Status: " + safeStatus; // Constroi e devolve uma string com o numero de temporadas, episodios e estado
+  } // Fim do metodo getDetails
+
+} // Fim da classe Series

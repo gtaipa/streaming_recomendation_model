@@ -1,638 +1,658 @@
-package streaming.db;
+package streaming.db; // Declara que esta classe pertence ao pacote streaming.db
 
-import edu.princeton.cs.algs4.DirectedEdge;
-import edu.princeton.cs.algs4.DijkstraSP;
+import edu.princeton.cs.algs4.DirectedEdge; // Importa a classe que representa uma aresta direcionada com peso
+import edu.princeton.cs.algs4.DijkstraSP; // Importa o algoritmo de Dijkstra para caminhos mais curtos
 
-import streaming.model.Artist;
-import streaming.model.Content;
-import streaming.model.Entity;
-import streaming.model.Interaction;
-import streaming.model.InteractionType;
-import streaming.model.User;
+import streaming.model.Artist; // Importa a classe que representa um artista da plataforma
+import streaming.model.Content; // Importa a classe abstrata base para todos os tipos de conteudo
+import streaming.model.Entity; // Importa a classe base de todas as entidades do sistema
+import streaming.model.Interaction; // Importa a classe que representa uma interacao entre utilizador e conteudo
+import streaming.model.InteractionType; // Importa o enum com os tipos de interacao possiveis
+import streaming.model.User; // Importa a classe que representa um utilizador da plataforma
 
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
+import java.time.LocalDateTime; // Importa a classe que representa data e hora juntas
+import java.util.ArrayList; // Importa a classe que cria listas dinamicas que crescem conforme necessario
+import java.util.List; // Importa a interface que define o comportamento de uma lista ordenada de elementos
 
 /**
- * R7 - API pública para gestão de relações entre entidades no grafo.
+ * API publica para gestao de relacoes entre entidades no grafo.
  *
- * Esta classe serve de "fachada" (Facade pattern) entre o código da aplicação
+ * Esta classe serve de fachada (Facade pattern) entre o codigo da aplicacao
  * e o grafo interno (StreamingGraph).
- *
- * RESPONSABILIDADES:
- * - Registar entidades no grafo (vértices)
- * - Criar relações entre entidades (arestas): watch, rate, follow, participação de artistas
- * - Consultar relações (quem viu o quê, quem segue quem, etc.)
- * - Remover entidades e relações
- * - Listar informação do grafo
- *
- * PORQUÊ SEPARAR DO StreamingGraph?
- * - O StreamingGraph lida com a mecânica interna (índices, algs4, rebuild, etc.)
- * - Esta API lida com a lógica de negócio (validações, integração com StreamingDB, etc.)
- * - Na defesa, mostra que sabes aplicar separação de responsabilidades
- *
- * COMO USAR:
- * StreamingDB db = new StreamingDB();
- * StreamingGraph graph = new StreamingGraph();
- * StreamingGraphAPI api = new StreamingGraphAPI(db, graph);
- *
- * // Registar entidades
- * api.registerUser(user);
- * api.registerContent(movie);
- *
- * // Criar relações
- * api.addWatch(user.getId(), movie.getId(), 100.0, 8.5);
- * api.addFollow(user1.getId(), user2.getId());
  */
-public class StreamingGraphAPI {
+/*
+ * DICIONARIO:
+ * - Facade pattern: padrao de design que simplifica o acesso a um subsistema complexo
+ * - final: modificador que impede a alteracao do valor de um atributo apos a inicializacao
+ * - StreamingDB: base de dados em memoria com as entidades da plataforma
+ * - StreamingGraph: grafo direcionado onde sao guardadas as relacoes entre entidades
+ * - vertice: no do grafo que representa uma entidade
+ * - aresta: ligacao entre dois vertices com um peso
+ * - IllegalArgumentException: excecao lancada quando um argumento invalido e passado
+ * - Interaction: registo de uma acao de um utilizador sobre um conteudo
+ * - LocalDateTime: tipo que representa data e hora sem fuso horario
+ */
+public class StreamingGraphAPI { // Define a classe StreamingGraphAPI que serve de fachada para o grafo de entidades
 
-    // ATRIBUTOS
+    /** Referencia a base de dados da fase 1. */
+    private final StreamingDB db; // Atributo que guarda a referencia a base de dados de entidades
 
-
-    /**
-     * Referência à base de dados (Fase 1).
-     * Usamos para ir buscar entidades pelos IDs e garantir consistência.
-     */
-    private final StreamingDB db;
-
-    /**
-     * O grafo onde armazenamos as relações.
-     */
-    private final StreamingGraph graph;
-
-    // =====================================================
-    // CONSTRUTOR
-    // =====================================================
+    /** O grafo onde sao armazenadas as relacoes. */
+    private final StreamingGraph graph; // Atributo que guarda a referencia ao grafo de relacoes
 
     /**
      * Cria a API do grafo ligada a uma base de dados e a um grafo.
      *
-     * @param db    a base de dados com as entidades (Users, Contents, Artists, etc.)
-     * @param graph o grafo onde vamos armazenar as relações
+     * @param db a base de dados com as entidades
+     * @param graph o grafo onde sao armazenadas as relacoes
      */
-    public StreamingGraphAPI(StreamingDB db, StreamingGraph graph) {
-        if (db == null || graph == null) {
-            throw new IllegalArgumentException("StreamingDB e StreamingGraph não podem ser null");
-        }
-        this.db = db;
-        this.graph = graph;
-    }
-
-    // =====================================================
-    // REGISTO DE ENTIDADES (Vértices)
-    // =====================================================
+    /*
+     * DICIONARIO:
+     * - construtor: metodo especial chamado quando se cria um novo objeto
+     * - throw: palavra-chave que lanca uma excecao e interrompe a execucao normal
+     * - IllegalArgumentException: tipo de excecao para argumentos invalidos
+     * - this: referencia ao objeto que esta a ser criado
+     */
+    public StreamingGraphAPI(StreamingDB db, StreamingGraph graph) { // Construtor que cria a API ligada a uma base de dados e a um grafo
+        if (db == null || graph == null) { // Verifica se os argumentos obrigatorios foram fornecidos
+            throw new IllegalArgumentException("StreamingDB e StreamingGraph nao podem ser null"); // Lanca excecao se algum for null
+        } // Fim da verificacao
+        this.db = db; // Guarda a referencia a base de dados
+        this.graph = graph; // Guarda a referencia ao grafo
+    } // Fim do construtor
 
     /**
-     * Regista um User no grafo como vértice.
-     * O User deve já existir na StreamingDB.
+     * Regista um utilizador no grafo como vertice.
      *
      * @param userId o ID do utilizador
-     * @return true se foi registado com sucesso, false se não existe na DB ou já está no grafo
+     * @return {@code true} se foi registado com sucesso
      */
-    public boolean registerUser(String userId) {
-        if (userId == null) return false;
-        User u = db.getUser(userId);
-        if (u == null) return false;
-        graph.addVertex(u);
-        return true;
-    }
+    /*
+     * DICIONARIO:
+     * - db.getUser: vai buscar o utilizador pelo ID na base de dados
+     * - graph.addVertex: adiciona a entidade como vertice no grafo
+     */
+    public boolean registerUser(String userId) { // Metodo que regista um utilizador no grafo como vertice
+        if (userId == null) return false; // Rejeita IDs nulos
+        User u = db.getUser(userId); // Vai buscar o utilizador na base de dados
+        if (u == null) return false; // Se nao existir na DB, nao pode ser registado
+        graph.addVertex(u); // Adiciona o utilizador como vertice no grafo
+        return true; // Indica que o registo foi bem sucedido
+    } // Fim do metodo registerUser
 
     /**
-     * Regista um Content (Movie, Series, Documentary) no grafo como vértice.
+     * Regista um conteudo no grafo como vertice.
      *
-     * @param contentId o ID do conteúdo
-     * @return true se foi registado com sucesso
+     * @param contentId o ID do conteudo
+     * @return {@code true} se foi registado com sucesso
      */
-    public boolean registerContent(String contentId) {
-        if (contentId == null) return false;
-        Content c = db.getContent(contentId);
-        if (c == null) return false;
-        graph.addVertex(c);
-        return true;
-    }
+    public boolean registerContent(String contentId) { // Metodo que regista um conteudo no grafo como vertice
+        if (contentId == null) return false; // Rejeita IDs nulos
+        Content c = db.getContent(contentId); // Vai buscar o conteudo na base de dados
+        if (c == null) return false; // Se nao existir na DB, nao pode ser registado
+        graph.addVertex(c); // Adiciona o conteudo como vertice no grafo
+        return true; // Indica que o registo foi bem sucedido
+    } // Fim do metodo registerContent
 
     /**
-     * Regista um Artist no grafo como vértice.
+     * Regista um artista no grafo como vertice.
      *
      * @param artistId o ID do artista
-     * @return true se foi registado com sucesso
+     * @return {@code true} se foi registado com sucesso
      */
-    public boolean registerArtist(String artistId) {
-        if (artistId == null) return false;
-        Artist a = db.getArtist(artistId);
-        if (a == null) return false;
-        graph.addVertex(a);
-        return true;
-    }
+    public boolean registerArtist(String artistId) { // Metodo que regista um artista no grafo como vertice
+        if (artistId == null) return false; // Rejeita IDs nulos
+        Artist a = db.getArtist(artistId); // Vai buscar o artista na base de dados
+        if (a == null) return false; // Se nao existir na DB, nao pode ser registado
+        graph.addVertex(a); // Adiciona o artista como vertice no grafo
+        return true; // Indica que o registo foi bem sucedido
+    } // Fim do metodo registerArtist
 
     /**
-     * Regista todas as entidades da DB no grafo de uma só vez.
-     * Útil para inicializar o grafo com dados já existentes.
+     * Regista todas as entidades da base de dados no grafo de uma so vez.
      *
-     * @return o número total de entidades registadas
+     * @return o numero total de entidades registadas
      */
-    public int registerAllEntities() {
-        int count = 0;
+    /*
+     * DICIONARIO:
+     * - db.listUsers: devolve todos os utilizadores ativos
+     * - db.listContents: devolve todos os conteudos
+     * - db.listArtists: devolve todos os artistas
+     * - count: contador de entidades registadas
+     */
+    public int registerAllEntities() { // Metodo que regista todas as entidades da base de dados no grafo
+        int count = 0; // Inicializa o contador de entidades registadas
 
-        for (User u : db.listUsers()) {
-            graph.addVertex(u);
-            count++;
-        }
-        for (Content c : db.listContents()) {
-            graph.addVertex(c);
-            count++;
-        }
-        for (Artist a : db.listArtists()) {
-            graph.addVertex(a);
-            count++;
-        }
+        for (User u : db.listUsers()) { // Percorre todos os utilizadores ativos
+            graph.addVertex(u); // Adiciona cada utilizador como vertice
+            count++; // Incrementa o contador
+        } // Fim do ciclo de utilizadores
+        for (Content c : db.listContents()) { // Percorre todos os conteudos
+            graph.addVertex(c); // Adiciona cada conteudo como vertice
+            count++; // Incrementa o contador
+        } // Fim do ciclo de conteudos
+        for (Artist a : db.listArtists()) { // Percorre todos os artistas
+            graph.addVertex(a); // Adiciona cada artista como vertice
+            count++; // Incrementa o contador
+        } // Fim do ciclo de artistas
 
-        return count;
-    }
-
-    // =====================================================
-    // CRIAR RELAÇÕES (Arestas) - Interações User → Content
-    // =====================================================
+        return count; // Devolve o total de entidades registadas
+    } // Fim do metodo registerAllEntities
 
     /**
-     * Regista que um utilizador VIU um conteúdo.
+     * Regista que um utilizador viu um conteudo.
      *
-     * Cria uma aresta: User → Content com tipo WATCH.
-     * O peso da aresta é o rating dado pelo utilizador.
-     *
-     * @param userId     o ID do utilizador
-     * @param contentId  o ID do conteúdo visto
+     * @param userId o ID do utilizador
+     * @param contentId o ID do conteudo visto
      * @param watchedPct percentagem vista (0-100)
-     * @param rating     classificação dada (ex: 8.5)
-     * @return true se a relação foi criada com sucesso
+     * @param rating classificacao dada pelo utilizador
+     * @return {@code true} se a relacao foi criada com sucesso
      */
-    public boolean addWatch(String userId, String contentId, double watchedPct, double rating) {
-        User u = db.getUser(userId);
-        Content c = db.getContent(contentId);
-        if (u == null || c == null) return false;
+    /*
+     * DICIONARIO:
+     * - WATCH: tipo de interacao que representa a visualizacao de um conteudo
+     * - Interaction: objeto que encapsula todos os dados de uma interacao
+     * - LocalDateTime.now(): devolve a data e hora atuais
+     * - weight: peso da aresta no grafo; aqui igual ao rating
+     */
+    public boolean addWatch(String userId, String contentId, double watchedPct, double rating) { // Metodo que regista a visualizacao de um conteudo por um utilizador
+        User u = db.getUser(userId); // Vai buscar o utilizador na base de dados
+        Content c = db.getContent(contentId); // Vai buscar o conteudo na base de dados
+        if (u == null || c == null) return false; // Se algum nao existir, nao cria a relacao
 
-        Interaction interaction = new Interaction(
+        Interaction interaction = new Interaction( // Cria a interacao com todos os dados da visualizacao
                 u, c, InteractionType.WATCH,
-                LocalDateTime.now(),
-                watchedPct, rating, rating  // peso = rating
+                LocalDateTime.now(), // Usa o momento atual como timestamp
+                watchedPct, rating, rating // O peso da aresta e igual ao rating
         );
 
-        graph.addEdge(interaction);
-        return true;
-    }
+        graph.addEdge(interaction); // Adiciona a interacao como aresta no grafo
+        return true; // Indica que a relacao foi criada com sucesso
+    } // Fim do metodo addWatch
 
     /**
-     * Regista que um utilizador VIU um conteúdo com timestamp específico.
-     * Útil para importar dados históricos de ficheiros.
+     * Regista que um utilizador viu um conteudo com timestamp especifico.
      *
-     * @param userId     o ID do utilizador
-     * @param contentId  o ID do conteúdo
+     * @param userId o ID do utilizador
+     * @param contentId o ID do conteudo
      * @param watchedPct percentagem vista
-     * @param rating     classificação
-     * @param timestamp  data/hora da visualização
-     * @return true se a relação foi criada com sucesso
+     * @param rating classificacao dada
+     * @param timestamp data e hora da visualizacao
+     * @return {@code true} se a relacao foi criada com sucesso
      */
-    public boolean addWatch(String userId, String contentId, double watchedPct,
+    public boolean addWatch(String userId, String contentId, double watchedPct, // Metodo que regista a visualizacao com um timestamp especifico (util para importar dados historicos)
                             double rating, LocalDateTime timestamp) {
-        User u = db.getUser(userId);
-        Content c = db.getContent(contentId);
-        if (u == null || c == null) return false;
+        User u = db.getUser(userId); // Vai buscar o utilizador na base de dados
+        Content c = db.getContent(contentId); // Vai buscar o conteudo na base de dados
+        if (u == null || c == null) return false; // Se algum nao existir, nao cria a relacao
 
-        Interaction interaction = new Interaction(
+        Interaction interaction = new Interaction( // Cria a interacao com o timestamp indicado
                 u, c, InteractionType.WATCH,
-                timestamp,
-                watchedPct, rating, rating
+                timestamp, // Usa o timestamp fornecido em vez do momento atual
+                watchedPct, rating, rating // O peso da aresta e igual ao rating
         );
 
-        graph.addEdge(interaction);
-        return true;
-    }
+        graph.addEdge(interaction); // Adiciona a interacao como aresta no grafo
+        return true; // Indica que a relacao foi criada com sucesso
+    } // Fim do metodo addWatch (com timestamp)
 
     /**
-     * Regista que um utilizador CLASSIFICOU (rated) um conteúdo.
+     * Regista que um utilizador classificou um conteudo.
      *
-     * @param userId    o ID do utilizador
-     * @param contentId o ID do conteúdo
-     * @param rating    a classificação (ex: 9.0)
-     * @return true se a relação foi criada com sucesso
+     * @param userId o ID do utilizador
+     * @param contentId o ID do conteudo
+     * @param rating a classificacao atribuida
+     * @return {@code true} se a relacao foi criada com sucesso
      */
-    public boolean addRating(String userId, String contentId, double rating) {
-        User u = db.getUser(userId);
-        Content c = db.getContent(contentId);
-        if (u == null || c == null) return false;
+    /*
+     * DICIONARIO:
+     * - RATE: tipo de interacao que representa a classificacao de um conteudo
+     */
+    public boolean addRating(String userId, String contentId, double rating) { // Metodo que regista a classificacao de um conteudo por um utilizador
+        User u = db.getUser(userId); // Vai buscar o utilizador na base de dados
+        Content c = db.getContent(contentId); // Vai buscar o conteudo na base de dados
+        if (u == null || c == null) return false; // Se algum nao existir, nao cria a relacao
 
-        Interaction interaction = new Interaction(
+        Interaction interaction = new Interaction( // Cria a interacao de classificacao
                 u, c, InteractionType.RATE,
-                LocalDateTime.now(),
-                0, rating, rating
+                LocalDateTime.now(), // Usa o momento atual como timestamp
+                0, rating, rating // watchedPct e 0 pois e so uma classificacao
         );
 
-        graph.addEdge(interaction);
-        return true;
-    }
+        graph.addEdge(interaction); // Adiciona a interacao como aresta no grafo
+        return true; // Indica que a relacao foi criada com sucesso
+    } // Fim do metodo addRating
 
     /**
-     * Regista que um utilizador CLASSIFICOU um conteúdo com timestamp específico.
-     * Útil para importar dados históricos de ficheiros.
+     * Regista que um utilizador classificou um conteudo com timestamp especifico.
      *
-     * @param userId    o ID do utilizador
-     * @param contentId o ID do conteúdo
-     * @param rating    a classificação
-     * @param timestamp data/hora da classificação
-     * @return true se a relação foi criada com sucesso
+     * @param userId o ID do utilizador
+     * @param contentId o ID do conteudo
+     * @param rating a classificacao atribuida
+     * @param timestamp data e hora da classificacao
+     * @return {@code true} se a relacao foi criada com sucesso
      */
-    public boolean addRating(String userId, String contentId, double rating, LocalDateTime timestamp) {
-        User u = db.getUser(userId);
-        Content c = db.getContent(contentId);
-        if (u == null || c == null) return false;
+    public boolean addRating(String userId, String contentId, double rating, LocalDateTime timestamp) { // Metodo que regista a classificacao com um timestamp especifico
+        User u = db.getUser(userId); // Vai buscar o utilizador na base de dados
+        Content c = db.getContent(contentId); // Vai buscar o conteudo na base de dados
+        if (u == null || c == null) return false; // Se algum nao existir, nao cria a relacao
 
-        Interaction interaction = new Interaction(
+        Interaction interaction = new Interaction( // Cria a interacao de classificacao com o timestamp indicado
                 u, c, InteractionType.RATE,
-                timestamp,
-                0, rating, rating
+                timestamp, // Usa o timestamp fornecido em vez do momento atual
+                0, rating, rating // watchedPct e 0 pois e so uma classificacao
         );
 
-        graph.addEdge(interaction);
-        return true;
-    }
+        graph.addEdge(interaction); // Adiciona a interacao como aresta no grafo
+        return true; // Indica que a relacao foi criada com sucesso
+    } // Fim do metodo addRating (com timestamp)
 
     /**
-     * Regista que um utilizador CLICOU num conteúdo (mostrou interesse).
+     * Regista que um utilizador clicou num conteudo.
      *
-     * @param userId    o ID do utilizador
-     * @param contentId o ID do conteúdo
-     * @return true se a relação foi criada com sucesso
+     * @param userId o ID do utilizador
+     * @param contentId o ID do conteudo
+     * @return {@code true} se a relacao foi criada com sucesso
      */
-    public boolean addClick(String userId, String contentId) {
-        User u = db.getUser(userId);
-        Content c = db.getContent(contentId);
-        if (u == null || c == null) return false;
-
-        Interaction interaction = new Interaction(
-                u, c, InteractionType.CLICK,
-                LocalDateTime.now(),
-                0, 0, 1.0  // peso fixo de 1.0 para clicks
-        );
-
-        graph.addEdge(interaction);
-        return true;
-    }
-
-    /**
-     * Regista que um utilizador CLICOU num conteúdo com timestamp específico.
-     * Útil para importar dados históricos de ficheiros.
-     *
-     * @param userId    o ID do utilizador
-     * @param contentId o ID do conteúdo
-     * @param timestamp data/hora do clique
-     * @return true se a relação foi criada com sucesso
+    /*
+     * DICIONARIO:
+     * - CLICK: tipo de interacao que representa o clique num conteudo (demonstracao de interesse)
+     * - peso 1.0: valor padrao fixo para interacoes de clique
      */
-    public boolean addClick(String userId, String contentId, LocalDateTime timestamp) {
-        User u = db.getUser(userId);
-        Content c = db.getContent(contentId);
-        if (u == null || c == null) return false;
+    public boolean addClick(String userId, String contentId) { // Metodo que regista o clique de um utilizador num conteudo
+        User u = db.getUser(userId); // Vai buscar o utilizador na base de dados
+        Content c = db.getContent(contentId); // Vai buscar o conteudo na base de dados
+        if (u == null || c == null) return false; // Se algum nao existir, nao cria a relacao
 
-        Interaction interaction = new Interaction(
+        Interaction interaction = new Interaction( // Cria a interacao de clique
                 u, c, InteractionType.CLICK,
-                timestamp,
-                0, 0, 1.0  // peso fixo de 1.0 para clicks
+                LocalDateTime.now(), // Usa o momento atual como timestamp
+                0, 0, 1.0 // Peso fixo de 1.0 para cliques
         );
 
-        graph.addEdge(interaction);
-        return true;
-    }
-
-    // =====================================================
-    // CRIAR RELAÇÕES (Arestas) - Follow entre Users
-    // =====================================================
+        graph.addEdge(interaction); // Adiciona a interacao como aresta no grafo
+        return true; // Indica que a relacao foi criada com sucesso
+    } // Fim do metodo addClick
 
     /**
-     * Regista que um utilizador SEGUE outro utilizador.
+     * Regista que um utilizador clicou num conteudo com timestamp especifico.
      *
-     * Cria uma aresta direcionada: follower → followed com peso 1.0
-     * Também atualiza a lista de following no objeto User (Fase 1).
+     * @param userId o ID do utilizador
+     * @param contentId o ID do conteudo
+     * @param timestamp data e hora do clique
+     * @return {@code true} se a relacao foi criada com sucesso
+     */
+    public boolean addClick(String userId, String contentId, LocalDateTime timestamp) { // Metodo que regista o clique com um timestamp especifico
+        User u = db.getUser(userId); // Vai buscar o utilizador na base de dados
+        Content c = db.getContent(contentId); // Vai buscar o conteudo na base de dados
+        if (u == null || c == null) return false; // Se algum nao existir, nao cria a relacao
+
+        Interaction interaction = new Interaction( // Cria a interacao de clique com o timestamp indicado
+                u, c, InteractionType.CLICK,
+                timestamp, // Usa o timestamp fornecido em vez do momento atual
+                0, 0, 1.0 // Peso fixo de 1.0 para cliques
+        );
+
+        graph.addEdge(interaction); // Adiciona a interacao como aresta no grafo
+        return true; // Indica que a relacao foi criada com sucesso
+    } // Fim do metodo addClick (com timestamp)
+
+    /**
+     * Regista que um utilizador segue outro utilizador.
      *
      * @param followerId o ID de quem segue
-     * @param followedId o ID de quem é seguido
-     * @return true se a relação foi criada com sucesso
+     * @param followedId o ID de quem e seguido
+     * @return {@code true} se a relacao foi criada com sucesso
      */
-    public boolean addFollow(String followerId, String followedId) {
-        User follower = db.getUser(followerId);
-        User followed = db.getUser(followedId);
-        if (follower == null || followed == null) return false;
-        if (followerId.equals(followedId)) return false;  // não pode seguir a si próprio
+    /*
+     * DICIONARIO:
+     * - FOLLOW: tipo de interacao que representa o seguimento de um utilizador por outro
+     * - follower.follow(followed): actualiza tambem a lista de seguidos no objeto User
+     * - equals: verifica se dois IDs sao iguais para evitar que um utilizador se siga a si proprio
+     */
+    public boolean addFollow(String followerId, String followedId) { // Metodo que regista que um utilizador passa a seguir outro
+        User follower = db.getUser(followerId); // Vai buscar o utilizador que vai seguir
+        User followed = db.getUser(followedId); // Vai buscar o utilizador a ser seguido
+        if (follower == null || followed == null) return false; // Se algum nao existir, nao cria a relacao
+        if (followerId.equals(followedId)) return false; // Um utilizador nao pode seguir-se a si proprio
 
-        // Adicionar no grafo
-        // (FOLLOW passa a ser registado como Interaction, ver abaixo)
+        follower.follow(followed); // Atualiza a lista de seguidos no objeto User (consistencia com a base de dados)
 
-        // Também atualizar a lista de following no User (consistência com Fase 1)
-        follower.follow(followed);
+        Interaction interaction = new Interaction(follower, followed, LocalDateTime.now(), 1.0); // Cria a interacao de seguimento com peso 1.0
+        graph.addEdge(interaction); // Adiciona a interacao como aresta no grafo
 
-        // Guardar como Interaction do tipo FOLLOW (para ficar visivel em graph.getInteractions())
-        Interaction interaction = new Interaction(follower, followed, LocalDateTime.now(), 1.0);
-        graph.addEdge(interaction);
-
-        return true;
-    }
-
-    // =====================================================
-    // CRIAR RELAÇÕES (Arestas) - Artist ↔ Content
-    // =====================================================
+        return true; // Indica que a relacao foi criada com sucesso
+    } // Fim do metodo addFollow
 
     /**
-     * Regista que um artista PARTICIPOU num conteúdo.
-     *
-     * Cria uma aresta: Artist → Content com peso 1.0
-     * Útil para ligar atores/realizadores aos filmes/séries.
-     *
-     * @param artistId  o ID do artista
-     * @param contentId o ID do conteúdo
-     * @param weight    o peso da relação (pode representar importância do papel)
-     * @return true se a relação foi criada com sucesso
-     */
-    public boolean addArtistToContent(String artistId, String contentId, double weight) {
-        Artist a = db.getArtist(artistId);
-        Content c = db.getContent(contentId);
-        if (a == null || c == null) return false;
-
-        graph.addEdge(a, c, weight);
-        return true;
-    }
-
-    /**
-     * Versão simplificada com peso 1.0.
-     */
-    public boolean addArtistToContent(String artistId, String contentId) {
-        return addArtistToContent(artistId, contentId, 1.0);
-    }
-
-    // =====================================================
-    // REMOVER ENTIDADES DO GRAFO
-    // =====================================================
-
-    /**
-     * Remove um utilizador do grafo (e todas as suas relações).
-     *
-     * NOTA: Isto NÃO remove o User da StreamingDB (Fase 1).
-     * Remove apenas do grafo.
-     *
-     * @param userId o ID do utilizador
-     * @return true se foi removido
-     */
-    public boolean removeUserFromGraph(String userId) {
-        return graph.removeVertex(userId);
-    }
-
-    /**
-     * Remove um conteúdo do grafo (e todas as suas relações).
-     *
-     * @param contentId o ID do conteúdo
-     * @return true se foi removido
-     */
-    public boolean removeContentFromGraph(String contentId) {
-        return graph.removeVertex(contentId);
-    }
-
-    /**
-     * Remove um artista do grafo (e todas as suas relações).
+     * Regista que um artista participou num conteudo.
      *
      * @param artistId o ID do artista
-     * @return true se foi removido
+     * @param contentId o ID do conteudo
+     * @param weight o peso da relacao
+     * @return {@code true} se a relacao foi criada com sucesso
      */
-    public boolean removeArtistFromGraph(String artistId) {
-        return graph.removeVertex(artistId);
-    }
+    /*
+     * DICIONARIO:
+     * - participacao: relacao entre um artista e um conteudo (ex: ator num filme)
+     * - weight: peso da aresta; pode representar a importancia do papel do artista
+     */
+    public boolean addArtistToContent(String artistId, String contentId, double weight) { // Metodo que regista a participacao de um artista num conteudo
+        Artist a = db.getArtist(artistId); // Vai buscar o artista na base de dados
+        Content c = db.getContent(contentId); // Vai buscar o conteudo na base de dados
+        if (a == null || c == null) return false; // Se algum nao existir, nao cria a relacao
 
-    // =====================================================
-    // CONSULTAS DE RELAÇÕES
-    // =====================================================
+        graph.addEdge(a, c, weight); // Adiciona a aresta generica entre o artista e o conteudo com o peso indicado
+        return true; // Indica que a relacao foi criada com sucesso
+    } // Fim do metodo addArtistToContent
 
     /**
-     * Devolve todos os conteúdos que um utilizador viu/interagiu.
-     *
-     * @param userId o ID do utilizador
-     * @return lista de Contents ligados a este User
-     */
-    public List<Content> getContentsForUser(String userId) {
-        List<Content> result = new ArrayList<>();
-        if (userId == null || !graph.containsVertex(userId)) return result;
-
-        for (DirectedEdge e : graph.getOutEdges(userId)) {
-            Entity target = graph.getEntityByIndex(e.to());
-            if (target instanceof Content c) {
-                result.add(c);
-            }
-        }
-        return result;
-    }
-
-    /**
-     * Devolve todos os utilizadores que interagiram com um conteúdo.
-     *
-     * NOTA: Como o grafo é direcionado (User → Content), precisamos de
-     * percorrer todos os vértices e ver quais apontam para este conteúdo.
-     *
-     * @param contentId o ID do conteúdo
-     * @return lista de Users que interagiram com este conteúdo
-     */
-    public List<User> getUsersForContent(String contentId) {
-        List<User> result = new ArrayList<>();
-        if (contentId == null || !graph.containsVertex(contentId)) return result;
-
-        int contentIdx = graph.getIndex(contentId);
-
-        // Percorrer todos os vértices e ver quais têm aresta para este conteúdo
-        for (String id : graph.getAllVertexIds()) {
-            for (DirectedEdge e : graph.getOutEdges(id)) {
-                if (e.to() == contentIdx) {
-                    Entity source = graph.getEntity(id);
-                    if (source instanceof User u) {
-                        result.add(u);
-                    }
-                }
-            }
-        }
-        return result;
-    }
-
-    /**
-     * Devolve todos os utilizadores que um User segue.
-     *
-     * @param userId o ID do utilizador
-     * @return lista de Users seguidos
-     */
-    public List<User> getFollowing(String userId) {
-        List<User> result = new ArrayList<>();
-        if (userId == null || !graph.containsVertex(userId)) return result;
-
-        for (DirectedEdge e : graph.getOutEdges(userId)) {
-            Entity target = graph.getEntityByIndex(e.to());
-            if (target instanceof User u) {
-                result.add(u);
-            }
-        }
-        return result;
-    }
-
-    /**
-     * Devolve todos os seguidores de um User.
-     *
-     * (Quem tem aresta a apontar PARA este User)
-     *
-     * @param userId o ID do utilizador
-     * @return lista de Users que seguem este User
-     */
-    public List<User> getFollowers(String userId) {
-        List<User> result = new ArrayList<>();
-        if (userId == null || !graph.containsVertex(userId)) return result;
-
-        int userIdx = graph.getIndex(userId);
-
-        for (String id : graph.getAllVertexIds()) {
-            Entity source = graph.getEntity(id);
-            if (!(source instanceof User)) continue;
-
-            for (DirectedEdge e : graph.getOutEdges(id)) {
-                if (e.to() == userIdx) {
-                    result.add((User) source);
-                    break;  // já encontrámos a aresta, não precisamos de continuar
-                }
-            }
-        }
-        return result;
-    }
-
-    /**
-     * Devolve todos os conteúdos em que um artista participou.
+     * Versao simplificada de addArtistToContent com peso 1.0.
      *
      * @param artistId o ID do artista
-     * @return lista de Contents
+     * @param contentId o ID do conteudo
+     * @return {@code true} se a relacao foi criada com sucesso
      */
-    public List<Content> getContentsForArtist(String artistId) {
-        List<Content> result = new ArrayList<>();
-        if (artistId == null || !graph.containsVertex(artistId)) return result;
-
-        for (DirectedEdge e : graph.getOutEdges(artistId)) {
-            Entity target = graph.getEntityByIndex(e.to());
-            if (target instanceof Content c) {
-                result.add(c);
-            }
-        }
-        return result;
-    }
+    public boolean addArtistToContent(String artistId, String contentId) { // Metodo simplificado que regista a participacao com peso padrao 1.0
+        return addArtistToContent(artistId, contentId, 1.0); // Delega ao metodo completo com peso padrao
+    } // Fim do metodo addArtistToContent (simplificado)
 
     /**
-     * Devolve todos os artistas que participaram num conteúdo.
-     *
-     * @param contentId o ID do conteúdo
-     * @return lista de Artists
-     */
-    public List<Artist> getArtistsForContent(String contentId) {
-        List<Artist> result = new ArrayList<>();
-        if (contentId == null || !graph.containsVertex(contentId)) return result;
-
-        int contentIdx = graph.getIndex(contentId);
-
-        for (String id : graph.getAllVertexIds()) {
-            for (DirectedEdge e : graph.getOutEdges(id)) {
-                if (e.to() == contentIdx) {
-                    Entity source = graph.getEntity(id);
-                    if (source instanceof Artist a) {
-                        result.add(a);
-                    }
-                }
-            }
-        }
-        return result;
-    }
-
-    /**
-     * Devolve todas as interações de um utilizador.
+     * Remove um utilizador do grafo e todas as suas relacoes.
      *
      * @param userId o ID do utilizador
-     * @return lista de Interactions deste User
+     * @return {@code true} se foi removido
      */
-    public List<Interaction> getInteractionsForUser(String userId) {
-        List<Interaction> result = new ArrayList<>();
-        if (userId == null) return result;
-
-        for (Interaction i : graph.getInteractions()) {
-            if (userId.equals(i.getUser().getId())) {
-                result.add(i);
-            }
-        }
-        return result;
-    }
+    /*
+     * DICIONARIO:
+     * - removeVertex: metodo de StreamingGraph que remove o vertice e as suas arestas
+     */
+    public boolean removeUserFromGraph(String userId) { // Metodo que remove um utilizador do grafo
+        return graph.removeVertex(userId); // Delega a remocao ao grafo interno
+    } // Fim do metodo removeUserFromGraph
 
     /**
-     * Devolve todas as interações com um conteúdo.
+     * Remove um conteudo do grafo e todas as suas relacoes.
      *
-     * @param contentId o ID do conteúdo
-     * @return lista de Interactions com este Content
+     * @param contentId o ID do conteudo
+     * @return {@code true} se foi removido
      */
-    public List<Interaction> getInteractionsForContent(String contentId) {
-        List<Interaction> result = new ArrayList<>();
-        if (contentId == null) return result;
-
-        for (Interaction i : graph.getInteractions()) {
-            if (i.getContent() != null && contentId.equals(i.getContent().getId())) {
-                result.add(i);
-            }
-        }
-        return result;
-    }
-
-    // =====================================================
-    // INFORMAÇÃO GERAL DO GRAFO
-    // =====================================================
+    public boolean removeContentFromGraph(String contentId) { // Metodo que remove um conteudo do grafo
+        return graph.removeVertex(contentId); // Delega a remocao ao grafo interno
+    } // Fim do metodo removeContentFromGraph
 
     /**
-     * Número total de vértices no grafo.
+     * Remove um artista do grafo e todas as suas relacoes.
+     *
+     * @param artistId o ID do artista
+     * @return {@code true} se foi removido
      */
-    public int totalVertices() {
-        return graph.vertexCount();
-    }
+    public boolean removeArtistFromGraph(String artistId) { // Metodo que remove um artista do grafo
+        return graph.removeVertex(artistId); // Delega a remocao ao grafo interno
+    } // Fim do metodo removeArtistFromGraph
 
     /**
-     * Número total de arestas no grafo.
+     * Devolve todos os conteudos com que um utilizador interagiu.
+     *
+     * @param userId o ID do utilizador
+     * @return lista de conteudos associados a este utilizador
      */
-    public int totalEdges() {
-        return graph.edgeCount();
-    }
+    /*
+     * DICIONARIO:
+     * - instanceof: operador que verifica se um objeto e de um determinado tipo
+     * - getOutEdges: devolve as arestas de saida de um vertice
+     * - getEntityByIndex: devolve a entidade associada a um indice numerico
+     */
+    public List<Content> getContentsForUser(String userId) { // Metodo que devolve todos os conteudos com que um utilizador interagiu
+        List<Content> result = new ArrayList<>(); // Cria a lista de resultados vazia
+        if (userId == null || !graph.containsVertex(userId)) return result; // Se o utilizador nao existir no grafo, devolve lista vazia
+
+        for (DirectedEdge e : graph.getOutEdges(userId)) { // Percorre as arestas de saida do utilizador
+            Entity target = graph.getEntityByIndex(e.to()); // Vai buscar a entidade destino de cada aresta
+            if (target instanceof Content c) { // Se o destino for um conteudo...
+                result.add(c); // Adiciona ao resultado
+            } // Fim da verificacao do tipo
+        } // Fim do ciclo
+        return result; // Devolve a lista de conteudos
+    } // Fim do metodo getContentsForUser
 
     /**
-     * Número total de interações registadas.
+     * Devolve todos os utilizadores que interagiram com um conteudo.
+     *
+     * @param contentId o ID do conteudo
+     * @return lista de utilizadores que interagiram com este conteudo
      */
-    public int totalInteractions() {
-        return graph.getInteractions().size();
-    }
+    /*
+     * DICIONARIO:
+     * - getAllVertexIds: devolve os IDs de todos os vertices do grafo
+     * - getIndex: devolve o indice numerico de um vertice
+     * - e.to(): metodo de DirectedEdge que devolve o indice do vertice destino
+     */
+    public List<User> getUsersForContent(String contentId) { // Metodo que devolve todos os utilizadores que interagiram com um conteudo
+        List<User> result = new ArrayList<>(); // Cria a lista de resultados vazia
+        if (contentId == null || !graph.containsVertex(contentId)) return result; // Se o conteudo nao existir no grafo, devolve lista vazia
+
+        int contentIdx = graph.getIndex(contentId); // Vai buscar o indice numerico do conteudo
+
+        for (String id : graph.getAllVertexIds()) { // Percorre todos os vertices do grafo
+            for (DirectedEdge e : graph.getOutEdges(id)) { // Percorre as arestas de saida de cada vertice
+                if (e.to() == contentIdx) { // Se a aresta aponta para o conteudo procurado...
+                    Entity source = graph.getEntity(id); // Vai buscar a entidade origem
+                    if (source instanceof User u) { // Se a origem for um utilizador...
+                        result.add(u); // Adiciona ao resultado
+                    } // Fim da verificacao do tipo
+                } // Fim da verificacao do destino
+            } // Fim do ciclo de arestas
+        } // Fim do ciclo de vertices
+        return result; // Devolve a lista de utilizadores
+    } // Fim do metodo getUsersForContent
 
     /**
-     * Verifica se uma entidade está registada no grafo.
+     * Devolve todos os utilizadores que um utilizador segue.
+     *
+     * @param userId o ID do utilizador
+     * @return lista de utilizadores seguidos
+     */
+    public List<User> getFollowing(String userId) { // Metodo que devolve todos os utilizadores que um utilizador segue
+        List<User> result = new ArrayList<>(); // Cria a lista de resultados vazia
+        if (userId == null || !graph.containsVertex(userId)) return result; // Se o utilizador nao existir no grafo, devolve lista vazia
+
+        for (DirectedEdge e : graph.getOutEdges(userId)) { // Percorre as arestas de saida do utilizador
+            Entity target = graph.getEntityByIndex(e.to()); // Vai buscar a entidade destino de cada aresta
+            if (target instanceof User u) { // Se o destino for um utilizador...
+                result.add(u); // Adiciona ao resultado
+            } // Fim da verificacao do tipo
+        } // Fim do ciclo
+        return result; // Devolve a lista de utilizadores seguidos
+    } // Fim do metodo getFollowing
+
+    /**
+     * Devolve todos os seguidores de um utilizador.
+     *
+     * @param userId o ID do utilizador
+     * @return lista de utilizadores que seguem este utilizador
+     */
+    /*
+     * DICIONARIO:
+     * - seguidor: utilizador que tem uma aresta a apontar para o utilizador indicado
+     * - break: interrompe o ciclo quando o resultado ja foi encontrado
+     */
+    public List<User> getFollowers(String userId) { // Metodo que devolve todos os seguidores de um utilizador
+        List<User> result = new ArrayList<>(); // Cria a lista de resultados vazia
+        if (userId == null || !graph.containsVertex(userId)) return result; // Se o utilizador nao existir no grafo, devolve lista vazia
+
+        int userIdx = graph.getIndex(userId); // Vai buscar o indice numerico do utilizador
+
+        for (String id : graph.getAllVertexIds()) { // Percorre todos os vertices do grafo
+            Entity source = graph.getEntity(id); // Vai buscar a entidade de cada vertice
+            if (!(source instanceof User)) continue; // Ignora vertices que nao sejam utilizadores
+
+            for (DirectedEdge e : graph.getOutEdges(id)) { // Percorre as arestas de saida do vertice
+                if (e.to() == userIdx) { // Se a aresta aponta para o utilizador procurado...
+                    result.add((User) source); // Adiciona o utilizador ao resultado
+                    break; // Ja encontramos a aresta, nao e necessario continuar
+                } // Fim da verificacao do destino
+            } // Fim do ciclo de arestas
+        } // Fim do ciclo de vertices
+        return result; // Devolve a lista de seguidores
+    } // Fim do metodo getFollowers
+
+    /**
+     * Devolve todos os conteudos em que um artista participou.
+     *
+     * @param artistId o ID do artista
+     * @return lista de conteudos do artista
+     */
+    public List<Content> getContentsForArtist(String artistId) { // Metodo que devolve todos os conteudos em que um artista participou
+        List<Content> result = new ArrayList<>(); // Cria a lista de resultados vazia
+        if (artistId == null || !graph.containsVertex(artistId)) return result; // Se o artista nao existir no grafo, devolve lista vazia
+
+        for (DirectedEdge e : graph.getOutEdges(artistId)) { // Percorre as arestas de saida do artista
+            Entity target = graph.getEntityByIndex(e.to()); // Vai buscar a entidade destino de cada aresta
+            if (target instanceof Content c) { // Se o destino for um conteudo...
+                result.add(c); // Adiciona ao resultado
+            } // Fim da verificacao do tipo
+        } // Fim do ciclo
+        return result; // Devolve a lista de conteudos do artista
+    } // Fim do metodo getContentsForArtist
+
+    /**
+     * Devolve todos os artistas que participaram num conteudo.
+     *
+     * @param contentId o ID do conteudo
+     * @return lista de artistas do conteudo
+     */
+    public List<Artist> getArtistsForContent(String contentId) { // Metodo que devolve todos os artistas que participaram num conteudo
+        List<Artist> result = new ArrayList<>(); // Cria a lista de resultados vazia
+        if (contentId == null || !graph.containsVertex(contentId)) return result; // Se o conteudo nao existir no grafo, devolve lista vazia
+
+        int contentIdx = graph.getIndex(contentId); // Vai buscar o indice numerico do conteudo
+
+        for (String id : graph.getAllVertexIds()) { // Percorre todos os vertices do grafo
+            for (DirectedEdge e : graph.getOutEdges(id)) { // Percorre as arestas de saida de cada vertice
+                if (e.to() == contentIdx) { // Se a aresta aponta para o conteudo procurado...
+                    Entity source = graph.getEntity(id); // Vai buscar a entidade origem
+                    if (source instanceof Artist a) { // Se a origem for um artista...
+                        result.add(a); // Adiciona ao resultado
+                    } // Fim da verificacao do tipo
+                } // Fim da verificacao do destino
+            } // Fim do ciclo de arestas
+        } // Fim do ciclo de vertices
+        return result; // Devolve a lista de artistas do conteudo
+    } // Fim do metodo getArtistsForContent
+
+    /**
+     * Devolve todas as interacoes de um utilizador.
+     *
+     * @param userId o ID do utilizador
+     * @return lista de interacoes deste utilizador
+     */
+    /*
+     * DICIONARIO:
+     * - graph.getInteractions: devolve todas as interacoes registadas no grafo
+     * - i.getUser().getId(): devolve o ID do utilizador da interacao
+     */
+    public List<Interaction> getInteractionsForUser(String userId) { // Metodo que devolve todas as interacoes de um utilizador
+        List<Interaction> result = new ArrayList<>(); // Cria a lista de resultados vazia
+        if (userId == null) return result; // Sem ID nao ha pesquisa
+
+        for (Interaction i : graph.getInteractions()) { // Percorre todas as interacoes do grafo
+            if (userId.equals(i.getUser().getId())) { // Se a interacao for do utilizador procurado...
+                result.add(i); // Adiciona ao resultado
+            } // Fim da verificacao do utilizador
+        } // Fim do ciclo
+        return result; // Devolve a lista de interacoes do utilizador
+    } // Fim do metodo getInteractionsForUser
+
+    /**
+     * Devolve todas as interacoes com um conteudo.
+     *
+     * @param contentId o ID do conteudo
+     * @return lista de interacoes com este conteudo
+     */
+    /*
+     * DICIONARIO:
+     * - i.getContent(): devolve o conteudo da interacao
+     */
+    public List<Interaction> getInteractionsForContent(String contentId) { // Metodo que devolve todas as interacoes com um conteudo
+        List<Interaction> result = new ArrayList<>(); // Cria a lista de resultados vazia
+        if (contentId == null) return result; // Sem ID nao ha pesquisa
+
+        for (Interaction i : graph.getInteractions()) { // Percorre todas as interacoes do grafo
+            if (i.getContent() != null && contentId.equals(i.getContent().getId())) { // Se a interacao for com o conteudo procurado...
+                result.add(i); // Adiciona ao resultado
+            } // Fim da verificacao do conteudo
+        } // Fim do ciclo
+        return result; // Devolve a lista de interacoes com o conteudo
+    } // Fim do metodo getInteractionsForContent
+
+    /**
+     * Devolve o numero total de vertices no grafo.
+     *
+     * @return numero total de vertices
+     */
+    /*
+     * DICIONARIO:
+     * - vertexCount: metodo de StreamingGraph que devolve o numero de vertices
+     */
+    public int totalVertices() { // Metodo que devolve o numero total de vertices no grafo
+        return graph.vertexCount(); // Delega ao grafo interno
+    } // Fim do metodo totalVertices
+
+    /**
+     * Devolve o numero total de arestas no grafo.
+     *
+     * @return numero total de arestas
+     */
+    public int totalEdges() { // Metodo que devolve o numero total de arestas no grafo
+        return graph.edgeCount(); // Delega ao grafo interno
+    } // Fim do metodo totalEdges
+
+    /**
+     * Devolve o numero total de interacoes registadas.
+     *
+     * @return numero total de interacoes
+     */
+    public int totalInteractions() { // Metodo que devolve o numero total de interacoes registadas
+        return graph.getInteractions().size(); // Devolve o tamanho da lista de interacoes
+    } // Fim do metodo totalInteractions
+
+    /**
+     * Verifica se uma entidade esta registada no grafo.
      *
      * @param entityId o ID da entidade
-     * @return true se está no grafo
+     * @return {@code true} se estiver no grafo
      */
-    public boolean isRegistered(String entityId) {
-        return graph.containsVertex(entityId);
-    }
+    public boolean isRegistered(String entityId) { // Metodo que verifica se uma entidade esta registada no grafo
+        return graph.containsVertex(entityId); // Delega a verificacao ao grafo interno
+    } // Fim do metodo isRegistered
 
     /**
      * Devolve o StreamingGraph interno.
-     * Necessário para o R8 (algoritmos de caminhos, subgrafos, etc.)
      *
-     * @return o grafo
+     * @return o grafo interno
      */
-    public StreamingGraph getGraph() {
-        return graph;
-    }
+    /*
+     * DICIONARIO:
+     * - getter: metodo que devolve o valor de um atributo privado ou final
+     */
+    public StreamingGraph getGraph() { // Metodo getter que devolve o grafo interno
+        return graph; // Devolve a referencia ao grafo
+    } // Fim do metodo getGraph
 
     /**
-     * Representação textual da API (delega ao grafo).
+     * Devolve uma representacao textual da API, delegando ao grafo.
+     *
+     * @return texto descritivo do estado da API e do grafo
      */
-    @Override
-    public String toString() {
-        return "StreamingGraphAPI:\n" + graph.toString();
-    }
-}
+    /*
+     * DICIONARIO:
+     * - Override: anotacao que indica que estamos a redefinir o metodo toString herdado de Object
+     * - delega: chama o metodo correspondente noutro objeto em vez de implementar logica propria
+     */
+    @Override // Indica que estamos a redefinir o metodo toString herdado da classe Object
+    public String toString() { // Metodo que devolve uma representacao textual da API
+        return "StreamingGraphAPI:\n" + graph.toString(); // Delega a representacao ao grafo interno
+    } // Fim do metodo toString
+
+} // Fim da classe StreamingGraphAPI
