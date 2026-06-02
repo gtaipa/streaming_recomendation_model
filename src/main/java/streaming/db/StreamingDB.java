@@ -195,6 +195,20 @@ public class StreamingDB {
             if (!contentsByRegion.contains(region)) contentsByRegion.put(region, new ArrayList<>());
             contentsByRegion.get(region).add(content);
         }
+
+        double rating = content.getAvgRating();
+        if (!contentsByRating.contains(rating)) contentsByRating.put(rating, new ArrayList<>());
+        contentsByRating.get(rating).add(content);
+
+        int duration = content.getDuration();
+        if (duration > 0) {
+            if (!contentsByDuration.contains(duration)) contentsByDuration.put(duration, new ArrayList<>());
+            contentsByDuration.get(duration).add(content);
+        }
+
+        int views = content.getTotalViews();
+        if (!contentsByViews.contains(views)) contentsByViews.put(views, new ArrayList<>());
+        contentsByViews.get(views).add(content);
     }
 
     /**
@@ -232,6 +246,27 @@ public class StreamingDB {
             List<Content> list = contentsByRegion.get(region);
             list.removeIf(c -> c.getId().equals(content.getId()));
             if (list.isEmpty()) contentsByRegion.delete(region);
+        }
+
+        double rating = content.getAvgRating();
+        if (contentsByRating.contains(rating)) {
+            List<Content> list = contentsByRating.get(rating);
+            list.removeIf(c -> c.getId().equals(content.getId()));
+            if (list.isEmpty()) contentsByRating.delete(rating);
+        }
+
+        int duration = content.getDuration();
+        if (duration > 0 && contentsByDuration.contains(duration)) {
+            List<Content> list = contentsByDuration.get(duration);
+            list.removeIf(c -> c.getId().equals(content.getId()));
+            if (list.isEmpty()) contentsByDuration.delete(duration);
+        }
+
+        int views = content.getTotalViews();
+        if (contentsByViews.contains(views)) {
+            List<Content> list = contentsByViews.get(views);
+            list.removeIf(c -> c.getId().equals(content.getId()));
+            if (list.isEmpty()) contentsByViews.delete(views);
         }
     }
 
@@ -712,6 +747,99 @@ public class StreamingDB {
             if (a == null) continue;
             String name = a.getName();
             if (name != null && name.toLowerCase(Locale.ROOT).contains(needle)) out.add(a);
+        }
+        return out;
+    }
+
+    /**
+     * Searches artists by gender (case-insensitive linear scan).
+     *
+     * @param gender gender string to match (e.g. "M", "F")
+     * @return list of matching artists
+     */
+    public List<Artist> searchArtistsByGender(String gender) {
+        if (gender == null) return new ArrayList<>();
+        String needle = gender.toLowerCase(Locale.ROOT);
+        List<Artist> out = new ArrayList<>();
+        for (String id : this.artists.keys()) {
+            Artist a = this.artists.get(id);
+            if (a == null) continue;
+            String g = a.getGender();
+            if (g != null && g.toLowerCase(Locale.ROOT).equals(needle)) out.add(a);
+        }
+        return out;
+    }
+
+    /**
+     * Searches content whose avgRating falls within [min, max] using the rating BST index.
+     *
+     * @param min minimum rating (inclusive)
+     * @param max maximum rating (inclusive)
+     * @return list of matching contents
+     */
+    public List<Content> searchContentsByRatingRange(double min, double max) {
+        if (min > max) { double tmp = min; min = max; max = tmp; }
+        List<Content> out = new ArrayList<>();
+        for (Double r : this.contentsByRating.keys(min, max)) {
+            List<Content> bucket = this.contentsByRating.get(r);
+            if (bucket != null) out.addAll(bucket);
+        }
+        return out;
+    }
+
+    /**
+     * Searches content whose duration (in minutes) falls within [min, max] using the duration BST index.
+     * Contents with no duration (e.g. Series) are never indexed here.
+     *
+     * @param min minimum duration in minutes (inclusive)
+     * @param max maximum duration in minutes (inclusive)
+     * @return list of matching contents
+     */
+    public List<Content> searchContentsByDurationRange(int min, int max) {
+        if (min > max) { int tmp = min; min = max; max = tmp; }
+        List<Content> out = new ArrayList<>();
+        for (Integer d : this.contentsByDuration.keys(min, max)) {
+            List<Content> bucket = this.contentsByDuration.get(d);
+            if (bucket != null) out.addAll(bucket);
+        }
+        return out;
+    }
+
+    /**
+     * Searches content whose totalViews falls within [min, max] using the views BST index.
+     *
+     * @param min minimum views (inclusive)
+     * @param max maximum views (inclusive)
+     * @return list of matching contents
+     */
+    public List<Content> searchContentsByViewsRange(int min, int max) {
+        if (min > max) { int tmp = min; min = max; max = tmp; }
+        List<Content> out = new ArrayList<>();
+        for (Integer v : this.contentsByViews.keys(min, max)) {
+            List<Content> bucket = this.contentsByViews.get(v);
+            if (bucket != null) out.addAll(bucket);
+        }
+        return out;
+    }
+
+    /**
+     * Searches users who have the given genre in their preferences list (linear scan).
+     *
+     * @param genreName genre name to look for
+     * @return list of users who prefer that genre
+     */
+    public List<User> searchUsersByPreference(String genreName) {
+        if (genreName == null) return new ArrayList<>();
+        List<User> out = new ArrayList<>();
+        for (String id : this.users.keys()) {
+            User u = this.users.get(id);
+            if (u == null) continue;
+            for (Genre g : u.getPreferences()) {
+                if (g != null && genreName.equals(g.getName())) {
+                    out.add(u);
+                    break;
+                }
+            }
         }
         return out;
     }

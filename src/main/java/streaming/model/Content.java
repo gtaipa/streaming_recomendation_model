@@ -92,6 +92,14 @@ public abstract class Content extends Entity {
   }
 
   /**
+   * Duracao em minutos do conteudo; 0 se nao aplicavel (e.g. Series).
+   * Subclasses com duracao definida (Movie, Documentary) devem sobrepor este metodo.
+   *
+   * @return duracao em minutos, ou 0 se nao aplicavel
+   */
+  public int getDuration() { return 0; }
+
+  /**
    * Detalhes especificos do conteudo (ex.: duracao, realizador, status, etc.).
    *
    * @return descricao curta com detalhes do conteudo

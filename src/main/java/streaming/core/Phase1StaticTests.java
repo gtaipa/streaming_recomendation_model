@@ -2,6 +2,7 @@ package streaming.core;
 
 import streaming.db.StreamingDB;
 import streaming.model.Artist;
+import streaming.model.Documentary;
 import streaming.model.Genre;
 import streaming.model.Movie;
 import streaming.model.Series;
@@ -168,16 +169,22 @@ public final class Phase1StaticTests {
     // -------------------------------------------------------------------------
 
     /**
-     * R3 - Valida pesquisas ordenadas suportadas pelos indices Red-Black BST:
-     * por regiao, data de registo, substring de nome (utilizadores);
-     * por nacionalidade, data de nascimento, substring de nome (artistas);
-     * por genero, ano de lancamento, tipo e substring de titulo (conteudos).
-     * Inclui ainda a verificacao de que o indice BST e atualizado apos {@code updateUser}.
+     * R3 - Valida todas as pesquisas ordenadas suportadas pelos indices Red-Black BST,
+     * cobrindo as alineas a) a g) do requisito:
+     * <ul>
+     *   <li>R3a) Utilizadores por regiao e/ou data de registo e/ou preferencias</li>
+     *   <li>R3b) Utilizadores por substring no nome, combinada com regiao/data</li>
+     *   <li>R3c) Artistas por nacionalidade e/ou genero e/ou intervalo de nascimento</li>
+     *   <li>R3d) Artistas por substring no nome, combinada com nacionalidade/genero</li>
+     *   <li>R3e) Conteudos por tipo, genero e/ou ano de publicacao</li>
+     *   <li>R3f) Conteudos por substring no titulo, tipo e/ou genero e/ou ano</li>
+     *   <li>R3g) Conteudos por duracao, rating e/ou visualizacoes</li>
+     * </ul>
      *
      * @param print se {@code true}, imprime cada assert na consola
      */
     private static void testR3_BSTSearches(boolean print) {
-        header("R3 - Red-Black BST: pesquisas ordenadas", print);
+        header("R3 - Red-Black BST: pesquisas ordenadas (alineas a-g)", print);
 
         StreamingDB db = new StreamingDB();
 
@@ -197,110 +204,209 @@ public final class Phase1StaticTests {
         User u1 = new User("U1", LocalDateTime.now(), "alice",   "a@ex.com", "h1");
         u1.setRegion("Lisboa");
         u1.setRegistrationDate(LocalDate.of(2025, 1, 10));
+        u1.getPreferences().add(gAcao);
 
         User u2 = new User("U2", LocalDateTime.now(), "bob",     "b@ex.com", "h2");
         u2.setRegion("Porto");
         u2.setRegistrationDate(LocalDate.of(2025, 3, 20));
+        u2.getPreferences().add(gDrama);
 
         User u3 = new User("U3", LocalDateTime.now(), "charlie", "c@ex.com", "h3");
         u3.setRegion("Lisboa");
         u3.setRegistrationDate(LocalDate.of(2024, 11, 5));
+        u3.getPreferences().add(gAcao);
 
         db.addUser(u1);
         db.addUser(u2);
         db.addUser(u3);
 
-        Movie      m1 = new Movie("C1",      LocalDateTime.now(), "Dunkirk",      2017, gAcao,  "UK", 106, a1);
-        Movie      m2 = new Movie("C2",      LocalDateTime.now(), "Dune",         2021, gAcao,  "US", 156, a2);
-        Series     s1 = new Series("C3",     LocalDateTime.now(), "Drama Series", 2019, gDrama, "PT",   2, SeriesStatus.ENDED);
-        Movie      m3 = new Movie("C4",      LocalDateTime.now(), "Inception",    2010, gAcao,  "UK", 148, a1);
+        // C1: Movie, duracao=106, rating=7.5
+        Movie  m1 = new Movie("C1", LocalDateTime.now(), "Dunkirk",   2017, gAcao,  "UK", 106, a1);
+        // C2: Movie, duracao=156, rating=8.5
+        Movie  m2 = new Movie("C2", LocalDateTime.now(), "Dune",      2021, gAcao,  "US", 156, a2);
+        // C3: Series, sem duracao, rating=0.0
+        Series s1 = new Series("C3", LocalDateTime.now(), "Drama Series", 2019, gDrama, "PT", 2, SeriesStatus.ENDED);
+        // C4: Movie, duracao=148, rating=9.0
+        Movie  m3 = new Movie("C4", LocalDateTime.now(), "Inception", 2010, gAcao,  "UK", 148, a1);
+        // C5: Documentary, duracao=90, rating=8.0
+        Documentary doc = new Documentary("C5", LocalDateTime.now(), "Cosmos", 2014, gDrama, "US",
+                8.0, 500, new java.util.ArrayList<>(), 90, "Science", a3);
         db.addContent(m1);
         db.addContent(m2);
         db.addContent(s1);
         db.addContent(m3);
+        db.addContent(doc);
 
-        // ---- Utilizadores: por regiao ----
+        // ---- R3a) Utilizadores por regiao ----
         List<User> lisboa = db.searchUsersByRegion("Lisboa");
-        assertTrue("R3 | searchUsersByRegion Lisboa tem U1", containsUserId(lisboa, "U1"), print);
-        assertTrue("R3 | searchUsersByRegion Lisboa tem U3", containsUserId(lisboa, "U3"), print);
-        assertTrue("R3 | searchUsersByRegion Lisboa nao tem U2", !containsUserId(lisboa, "U2"), print);
+        assertTrue("R3a | searchUsersByRegion Lisboa tem U1", containsUserId(lisboa, "U1"), print);
+        assertTrue("R3a | searchUsersByRegion Lisboa tem U3", containsUserId(lisboa, "U3"), print);
+        assertTrue("R3a | searchUsersByRegion Lisboa nao tem U2", !containsUserId(lisboa, "U2"), print);
 
-        List<User> porto = db.searchUsersByRegion("Porto");
-        assertTrue("R3 | searchUsersByRegion Porto tem U2", containsUserId(porto, "U2"), print);
-
-        // ---- Utilizadores: por data de registo (range BST) ----
+        // ---- R3a) Utilizadores por data de registo (range BST) ----
         List<User> regJan2025 = db.searchUsersRegisteredBetween(
                 LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 31));
-        assertTrue("R3 | searchUsersRegisteredBetween jan2025 tem U1", containsUserId(regJan2025, "U1"), print);
-        assertTrue("R3 | searchUsersRegisteredBetween jan2025 nao tem U2", !containsUserId(regJan2025, "U2"), print);
+        assertTrue("R3a | searchUsersRegisteredBetween jan2025 tem U1",    containsUserId(regJan2025, "U1"), print);
+        assertTrue("R3a | searchUsersRegisteredBetween jan2025 nao tem U2",!containsUserId(regJan2025, "U2"), print);
 
         List<User> reg2024 = db.searchUsersRegisteredBetween(
                 LocalDate.of(2024, 1, 1), LocalDate.of(2024, 12, 31));
-        assertTrue("R3 | searchUsersRegisteredBetween 2024 tem U3", containsUserId(reg2024, "U3"), print);
+        assertTrue("R3a | searchUsersRegisteredBetween 2024 tem U3", containsUserId(reg2024, "U3"), print);
 
-        // ---- Utilizadores: por substring no nome ----
+        // ---- R3a) Utilizadores por preferencia de genero ----
+        List<User> prefAcao = db.searchUsersByPreference("Acao");
+        assertTrue("R3a | searchUsersByPreference Acao tem U1", containsUserId(prefAcao, "U1"), print);
+        assertTrue("R3a | searchUsersByPreference Acao tem U3", containsUserId(prefAcao, "U3"), print);
+        assertTrue("R3a | searchUsersByPreference Acao nao tem U2", !containsUserId(prefAcao, "U2"), print);
+
+        List<User> prefDrama = db.searchUsersByPreference("Drama");
+        assertTrue("R3a | searchUsersByPreference Drama tem U2", containsUserId(prefDrama, "U2"), print);
+
+        // ---- R3b) Utilizadores por substring no nome ----
         List<User> subBo = db.searchUsersByUsernameSubstring("bo");
-        assertTrue("R3 | searchUsersByUsernameSubstring 'bo' tem U2", containsUserId(subBo, "U2"), print);
-        assertTrue("R3 | searchUsersByUsernameSubstring 'bo' nao tem U1", !containsUserId(subBo, "U1"), print);
+        assertTrue("R3b | searchUsersByUsernameSubstring 'bo' tem U2", containsUserId(subBo, "U2"), print);
+        assertTrue("R3b | searchUsersByUsernameSubstring 'bo' nao tem U1", !containsUserId(subBo, "U1"), print);
+
+        // R3b) Combinacao: substring + regiao (intersecao manual)
+        List<User> subLi  = db.searchUsersByUsernameSubstring("li");
+        List<User> lisbUsers = db.searchUsersByRegion("Lisboa");
+        long lisbLiCount = subLi.stream().filter(u -> containsUserId(lisbUsers, u.getId())).count();
+        assertTrue("R3b | substring 'li' AND regiao Lisboa: so U1 (alice)", lisbLiCount == 1, print);
+
+        // R3b) Combinacao: substring + data de registo
+        List<User> subAl   = db.searchUsersByUsernameSubstring("al");
+        List<User> jan2025Users = db.searchUsersRegisteredBetween(
+                LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 31));
+        long alJanCount = subAl.stream().filter(u -> containsUserId(jan2025Users, u.getId())).count();
+        assertTrue("R3b | substring 'al' AND jan2025: so U1 (alice)", alJanCount == 1, print);
 
         // ---- Reindexacao BST apos updateUser ----
         u1.setRegion("Porto");
         db.updateUser(u1);
-        assertTrue("R3 | updateUser: Lisboa ja nao tem U1", !containsUserId(db.searchUsersByRegion("Lisboa"), "U1"), print);
-        assertTrue("R3 | updateUser: Porto agora tem U1",    containsUserId(db.searchUsersByRegion("Porto"),  "U1"), print);
+        assertTrue("R3a | updateUser: Lisboa ja nao tem U1", !containsUserId(db.searchUsersByRegion("Lisboa"), "U1"), print);
+        assertTrue("R3a | updateUser: Porto agora tem U1",    containsUserId(db.searchUsersByRegion("Porto"),  "U1"), print);
 
-        // ---- Artistas: por nacionalidade ----
-        assertTrue("R3 | searchArtistsByNationality UK tem A1",
+        // ---- R3c) Artistas por nacionalidade ----
+        assertTrue("R3c | searchArtistsByNationality UK tem A1",
                 containsArtistId(db.searchArtistsByNationality("UK"), "A1"), print);
-        assertTrue("R3 | searchArtistsByNationality CA tem A2",
+        assertTrue("R3c | searchArtistsByNationality CA tem A2",
                 containsArtistId(db.searchArtistsByNationality("CA"), "A2"), print);
-        assertTrue("R3 | searchArtistsByNationality UK nao tem A2",
+        assertTrue("R3c | searchArtistsByNationality UK nao tem A2",
                 !containsArtistId(db.searchArtistsByNationality("UK"), "A2"), print);
 
-        // ---- Artistas: por intervalo de nascimento ----
+        // ---- R3c) Artistas por genero (gender) ----
+        List<Artist> masc = db.searchArtistsByGender("M");
+        assertTrue("R3c | searchArtistsByGender M tem A1", containsArtistId(masc, "A1"), print);
+        assertTrue("R3c | searchArtistsByGender M tem A2", containsArtistId(masc, "A2"), print);
+        assertTrue("R3c | searchArtistsByGender M nao tem A3", !containsArtistId(masc, "A3"), print);
+
+        List<Artist> fem = db.searchArtistsByGender("F");
+        assertTrue("R3c | searchArtistsByGender F tem A3", containsArtistId(fem, "A3"), print);
+
+        // ---- R3c) Artistas por intervalo de nascimento ----
         List<Artist> born60s70s = db.searchArtistsBornBetween(
                 LocalDate.of(1960, 1, 1), LocalDate.of(1979, 12, 31));
-        assertTrue("R3 | searchArtistsBornBetween 1960-1979 tem A1", containsArtistId(born60s70s, "A1"), print);
-        assertTrue("R3 | searchArtistsBornBetween 1960-1979 tem A2", containsArtistId(born60s70s, "A2"), print);
-        assertTrue("R3 | searchArtistsBornBetween 1960-1979 nao tem A3 (1957)", !containsArtistId(born60s70s, "A3"), print);
+        assertTrue("R3c | searchArtistsBornBetween 1960-1979 tem A1", containsArtistId(born60s70s, "A1"), print);
+        assertTrue("R3c | searchArtistsBornBetween 1960-1979 tem A2", containsArtistId(born60s70s, "A2"), print);
+        assertTrue("R3c | searchArtistsBornBetween 1960-1979 nao tem A3 (1957)", !containsArtistId(born60s70s, "A3"), print);
 
-        // ---- Artistas: por substring no nome ----
+        // ---- R3d) Artistas por substring no nome ----
         List<Artist> subNol = db.searchArtistsByNameSubstring("nol");
-        assertTrue("R3 | searchArtistsByNameSubstring 'nol' tem A1", containsArtistId(subNol, "A1"), print);
-        assertTrue("R3 | searchArtistsByNameSubstring 'nol' nao tem A2", !containsArtistId(subNol, "A2"), print);
+        assertTrue("R3d | searchArtistsByNameSubstring 'nol' tem A1", containsArtistId(subNol, "A1"), print);
+        assertTrue("R3d | searchArtistsByNameSubstring 'nol' nao tem A2", !containsArtistId(subNol, "A2"), print);
 
-        // ---- Conteudos: por genero ----
+        // R3d) Combinacao: substring + nacionalidade
+        List<Artist> subVil  = db.searchArtistsByNameSubstring("vil");
+        List<Artist> natCA   = db.searchArtistsByNationality("CA");
+        long vilCACount = subVil.stream().filter(a -> containsArtistId(natCA, a.getId())).count();
+        assertTrue("R3d | substring 'vil' AND nacionalidade CA: so A2", vilCACount == 1, print);
+
+        // R3d) Combinacao: substring + genero
+        List<Artist> subNa   = db.searchArtistsByNameSubstring("na");
+        List<Artist> genF    = db.searchArtistsByGender("F");
+        long naFCount = subNa.stream().filter(a -> containsArtistId(genF, a.getId())).count();
+        assertTrue("R3d | substring 'na' AND gender F: so A3 (Nair)", naFCount == 1, print);
+
+        // ---- R3e) Conteudos por genero ----
         List<?> byAcao = db.searchByGenre("Acao");
-        assertTrue("R3 | searchByGenre Acao tem C1", containsContentId(byAcao, "C1"), print);
-        assertTrue("R3 | searchByGenre Acao tem C2", containsContentId(byAcao, "C2"), print);
-        assertTrue("R3 | searchByGenre Acao tem C4", containsContentId(byAcao, "C4"), print);
-        assertTrue("R3 | searchByGenre Acao nao tem C3 (Drama)", !containsContentId(byAcao, "C3"), print);
+        assertTrue("R3e | searchByGenre Acao tem C1", containsContentId(byAcao, "C1"), print);
+        assertTrue("R3e | searchByGenre Acao tem C2", containsContentId(byAcao, "C2"), print);
+        assertTrue("R3e | searchByGenre Acao tem C4", containsContentId(byAcao, "C4"), print);
+        assertTrue("R3e | searchByGenre Acao nao tem C3 (Drama)", !containsContentId(byAcao, "C3"), print);
 
-        // ---- Conteudos: por intervalo de ano ----
+        // ---- R3e) Conteudos por ano de publicacao ----
         List<?> by2017_2021 = db.searchContentsReleasedBetween(2017, 2021);
-        assertTrue("R3 | searchContentsReleasedBetween 2017-2021 tem C1", containsContentId(by2017_2021, "C1"), print);
-        assertTrue("R3 | searchContentsReleasedBetween 2017-2021 tem C2", containsContentId(by2017_2021, "C2"), print);
-        assertTrue("R3 | searchContentsReleasedBetween 2017-2021 tem C3", containsContentId(by2017_2021, "C3"), print);
-        assertTrue("R3 | searchContentsReleasedBetween 2017-2021 nao tem C4 (2010)", !containsContentId(by2017_2021, "C4"), print);
+        assertTrue("R3e | searchContentsReleasedBetween 2017-2021 tem C1", containsContentId(by2017_2021, "C1"), print);
+        assertTrue("R3e | searchContentsReleasedBetween 2017-2021 tem C2", containsContentId(by2017_2021, "C2"), print);
+        assertTrue("R3e | searchContentsReleasedBetween 2017-2021 tem C3", containsContentId(by2017_2021, "C3"), print);
+        assertTrue("R3e | searchContentsReleasedBetween 2017-2021 nao tem C4 (2010)", !containsContentId(by2017_2021, "C4"), print);
 
-        // ---- Conteudos: por tipo ----
+        // ---- R3e) Conteudos por tipo ----
         List<?> movies = db.searchContentsByType("movie");
-        assertTrue("R3 | searchContentsByType movie tem C1",  containsContentId(movies, "C1"), print);
-        assertTrue("R3 | searchContentsByType movie nao tem C3 (series)", !containsContentId(movies, "C3"), print);
+        assertTrue("R3e | searchContentsByType movie tem C1",  containsContentId(movies, "C1"), print);
+        assertTrue("R3e | searchContentsByType movie nao tem C3 (series)", !containsContentId(movies, "C3"), print);
 
-        List<?> series = db.searchContentsByType("series");
-        assertTrue("R3 | searchContentsByType series tem C3", containsContentId(series, "C3"), print);
+        List<?> seriesList = db.searchContentsByType("series");
+        assertTrue("R3e | searchContentsByType series tem C3", containsContentId(seriesList, "C3"), print);
 
-        // ---- Conteudos: por substring no titulo ----
+        List<?> docs = db.searchContentsByType("documentary");
+        assertTrue("R3e | searchContentsByType documentary tem C5", containsContentId(docs, "C5"), print);
+
+        // ---- R3f) Conteudos por substring no titulo ----
         List<?> subDun = db.searchContentsByTitleSubstring("dun");
-        assertTrue("R3 | searchContentsByTitleSubstring 'dun' tem C1 (Dunkirk)", containsContentId(subDun, "C1"), print);
-        assertTrue("R3 | searchContentsByTitleSubstring 'dun' nao tem C2 (Dune)", !containsContentId(subDun, "C2"), print);
+        assertTrue("R3f | searchContentsByTitleSubstring 'dun' tem C1 (Dunkirk)", containsContentId(subDun, "C1"), print);
+        assertTrue("R3f | searchContentsByTitleSubstring 'dun' nao tem C2 (Dune)", !containsContentId(subDun, "C2"), print);
+
+        // R3f) Combinacao: substring + tipo
+        List<?> subDu    = db.searchContentsByTitleSubstring("du");
+        List<?> mvType   = db.searchContentsByType("movie");
+        long duMovieCount = subDu.stream().filter(o -> containsContentId(mvType, extractId(o))).count();
+        assertTrue("R3f | substring 'du' AND tipo movie: C1 e C2 (Dunkirk, Dune)", duMovieCount == 2, print);
+
+        // R3f) Combinacao: substring + genero
+        List<?> subDr    = db.searchContentsByTitleSubstring("dra");
+        List<?> genDrama = db.searchByGenre("Drama");
+        long drDramaCount = subDr.stream().filter(o -> containsContentId(genDrama, extractId(o))).count();
+        assertTrue("R3f | substring 'dra' AND genero Drama: so C3 (Drama Series)", drDramaCount == 1, print);
+
+        // R3f) Combinacao: substring + ano
+        List<?> subIn    = db.searchContentsByTitleSubstring("in");
+        List<?> pre2015  = db.searchContentsReleasedBetween(2000, 2015);
+        long inPre2015Count = subIn.stream().filter(o -> containsContentId(pre2015, extractId(o))).count();
+        assertTrue("R3f | substring 'in' AND ano<=2015: so C4 (Inception 2010)", inPre2015Count == 1, print);
+
+        // ---- R3g) Conteudos por duracao (BST) ----
+        // C1=106min, C2=156min, C4=148min, C5=90min, C3=Series(sem duracao)
+        List<streaming.model.Content> dur100_160 = db.searchContentsByDurationRange(100, 160);
+        assertTrue("R3g | searchContentsByDurationRange 100-160 tem C1 (106)", containsContentId(dur100_160, "C1"), print);
+        assertTrue("R3g | searchContentsByDurationRange 100-160 tem C2 (156)", containsContentId(dur100_160, "C2"), print);
+        assertTrue("R3g | searchContentsByDurationRange 100-160 tem C4 (148)", containsContentId(dur100_160, "C4"), print);
+        assertTrue("R3g | searchContentsByDurationRange 100-160 nao tem C5 (90)", !containsContentId(dur100_160, "C5"), print);
+        assertTrue("R3g | searchContentsByDurationRange 100-160 nao tem C3 (Series)", !containsContentId(dur100_160, "C3"), print);
+
+        List<streaming.model.Content> dur80_100 = db.searchContentsByDurationRange(80, 100);
+        assertTrue("R3g | searchContentsByDurationRange 80-100 tem C5 (90)", containsContentId(dur80_100, "C5"), print);
+        assertTrue("R3g | searchContentsByDurationRange 80-100 nao tem C1 (106)", !containsContentId(dur80_100, "C1"), print);
+
+        // ---- R3g) Conteudos por rating (BST) ----
+        // C5 foi criado com avgRating=8.0, os restantes com avgRating=0.0 (default Movie)
+        List<streaming.model.Content> rating7_9 = db.searchContentsByRatingRange(7.0, 9.0);
+        assertTrue("R3g | searchContentsByRatingRange 7.0-9.0 tem C5 (8.0)", containsContentId(rating7_9, "C5"), print);
+
+        List<streaming.model.Content> rating0_0 = db.searchContentsByRatingRange(0.0, 0.0);
+        assertTrue("R3g | searchContentsByRatingRange 0.0-0.0 tem C1 (movie sem rating)", containsContentId(rating0_0, "C1"), print);
+
+        // ---- R3g) Conteudos por visualizacoes (BST) ----
+        // C5 tem totalViews=500, restantes=0
+        List<streaming.model.Content> views400_600 = db.searchContentsByViewsRange(400, 600);
+        assertTrue("R3g | searchContentsByViewsRange 400-600 tem C5 (500 views)", containsContentId(views400_600, "C5"), print);
+        assertTrue("R3g | searchContentsByViewsRange 400-600 nao tem C1 (0 views)", !containsContentId(views400_600, "C1"), print);
 
         // ---- updateGenreName: indice BST de conteudos deve ser atualizado ----
         db.updateGenreName("G1", "Action");
-        assertTrue("R3 | updateGenreName: chave antiga 'Acao' vazia", db.searchByGenre("Acao").isEmpty(), print);
-        assertTrue("R3 | updateGenreName: nova chave 'Action' tem C1", containsContentId(db.searchByGenre("Action"), "C1"), print);
-        assertTrue("R3 | updateGenreName: nova chave 'Action' tem C2", containsContentId(db.searchByGenre("Action"), "C2"), print);
+        assertTrue("R3e | updateGenreName: chave antiga 'Acao' vazia", db.searchByGenre("Acao").isEmpty(), print);
+        assertTrue("R3e | updateGenreName: nova chave 'Action' tem C1", containsContentId(db.searchByGenre("Action"), "C1"), print);
+        assertTrue("R3e | updateGenreName: nova chave 'Action' tem C2", containsContentId(db.searchByGenre("Action"), "C2"), print);
     }
 
     // -------------------------------------------------------------------------
@@ -421,5 +527,10 @@ public final class Phase1StaticTests {
             if (o instanceof streaming.model.Content c && id.equals(c.getId())) return true;
         }
         return false;
+    }
+
+    private static String extractId(Object o) {
+        if (o instanceof streaming.model.Content c) return c.getId();
+        return null;
     }
 }
