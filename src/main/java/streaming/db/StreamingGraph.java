@@ -18,10 +18,24 @@ import java.util.Map;
  */
 public class StreamingGraph {
 
+  /**
+   * Representa uma aresta generica entre duas entidades que nao nasce diretamente de uma interacao.
+   */
   private static class GenericEdge {
+    /** Identificador da entidade origem. */
     String fromId;
+    /** Identificador da entidade destino. */
     String toId;
+    /** Peso associado a aresta. */
     double weight;
+
+    /**
+     * Cria uma aresta generica.
+     *
+     * @param fromId identificador da entidade origem
+     * @param toId identificador da entidade destino
+     * @param weight peso da aresta
+     */
     GenericEdge(String fromId, String toId, double weight) {
       this.fromId = fromId;
       this.toId = toId;
@@ -29,15 +43,26 @@ public class StreamingGraph {
     }
   }
 
+  /** Grafo pesado direcionado usado para guardar as arestas. */
   private EdgeWeightedDigraph graph;
+  /** Mapa entre identificadores de entidades e indices numericos no grafo. */
   private Map<String, Integer> nodeIndex;
+  /** Mapa inverso entre indices numericos e entidades. */
   private Map<Integer, Entity> indexToEntity;
+  /** Interacoes registadas como arestas do grafo. */
   private List<Interaction> interactions;
+  /** Arestas genericas registadas entre entidades. */
   private List<GenericEdge> genericEdges;
+  /** Proximo indice livre para inserir um vertice. */
   private int nextIndex;
+  /** Capacidade atual do grafo interno. */
   private int capacity;
+  /** Capacidade inicial do grafo interno. */
   private static final int DEFAULT_CAPACITY = 128;
 
+  /**
+   * Cria um grafo vazio com a capacidade inicial por defeito.
+   */
   public StreamingGraph() {
     this.capacity = DEFAULT_CAPACITY;
     this.graph = new EdgeWeightedDigraph(capacity);
@@ -48,6 +73,11 @@ public class StreamingGraph {
     this.nextIndex = 0;
   }
 
+  /**
+   * Adiciona uma entidade como vertice do grafo.
+   *
+   * @param e entidade a adicionar
+   */
   public void addVertex(Entity e) {
     if (e == null || e.getId() == null) return;
     if (nodeIndex.containsKey(e.getId())) return;
@@ -59,6 +89,12 @@ public class StreamingGraph {
     nextIndex++;
   }
 
+  /**
+   * Remove um vertice e todas as arestas associadas ao respetivo identificador.
+   *
+   * @param entityId identificador da entidade a remover
+   * @return {@code true} se o vertice existia e foi removido
+   */
   public boolean removeVertex(String entityId) {
     if (entityId == null || !nodeIndex.containsKey(entityId)) return false;
 
@@ -79,6 +115,11 @@ public class StreamingGraph {
     return true;
   }
 
+  /**
+   * Adiciona uma aresta ao grafo a partir de uma interacao.
+   *
+   * @param interaction interacao a registar
+   */
   public void addEdge(Interaction interaction) {
     if (interaction == null) return;
     if (interaction.getUser() == null) return;
@@ -97,6 +138,13 @@ public class StreamingGraph {
     interactions.add(interaction);
   }
 
+  /**
+   * Adiciona uma aresta generica entre duas entidades.
+   *
+   * @param from entidade origem
+   * @param to entidade destino
+   * @param weight peso da aresta
+   */
   public void addEdge(Entity from, Entity to, double weight) {
     if (from == null || to == null) return;
     addVertex(from);
@@ -110,38 +158,84 @@ public class StreamingGraph {
     genericEdges.add(new GenericEdge(from.getId(), to.getId(), weight));
   }
 
+  /**
+   * Adiciona uma relacao de seguimento entre dois utilizadores.
+   *
+   * @param follower utilizador que segue
+   * @param followed utilizador seguido
+   */
   public void addFollow(User follower, User followed) {
     if (follower == null || followed == null) return;
     addEdge(follower, followed, 1.0);
   }
 
+  /**
+   * Verifica se um vertice existe no grafo.
+   *
+   * @param entityId identificador da entidade
+   * @return {@code true} se a entidade estiver registada no grafo
+   */
   public boolean containsVertex(String entityId) {
     return entityId != null && nodeIndex.containsKey(entityId);
   }
 
+  /**
+   * Devolve o numero de vertices registados.
+   *
+   * @return numero de vertices
+   */
   public int vertexCount() {
     return nodeIndex.size();
   }
 
+  /**
+   * Devolve o numero de arestas registadas.
+   *
+   * @return numero de arestas
+   */
   public int edgeCount() {
     return graph.E();
   }
 
+  /**
+   * Devolve a entidade associada a um identificador.
+   *
+   * @param entityId identificador da entidade
+   * @return entidade correspondente, ou {@code null} se nao existir
+   */
   public Entity getEntity(String entityId) {
     if (entityId == null || !nodeIndex.containsKey(entityId)) return null;
     int idx = nodeIndex.get(entityId);
     return indexToEntity.get(idx);
   }
 
+  /**
+   * Devolve o indice interno de uma entidade.
+   *
+   * @param entityId identificador da entidade
+   * @return indice interno, ou {@code -1} se a entidade nao existir
+   */
   public int getIndex(String entityId) {
     if (entityId == null || !nodeIndex.containsKey(entityId)) return -1;
     return nodeIndex.get(entityId);
   }
 
+  /**
+   * Devolve a entidade associada a um indice interno.
+   *
+   * @param index indice interno
+   * @return entidade correspondente, ou {@code null} se nao existir
+   */
   public Entity getEntityByIndex(int index) {
     return indexToEntity.get(index);
   }
 
+  /**
+   * Devolve as arestas de saida de uma entidade.
+   *
+   * @param entityId identificador da entidade origem
+   * @return lista de arestas de saida validas
+   */
   public List<DirectedEdge> getOutEdges(String entityId) {
     List<DirectedEdge> result = new ArrayList<>();
     if (entityId == null || !nodeIndex.containsKey(entityId)) return result;
@@ -155,6 +249,12 @@ public class StreamingGraph {
     return result;
   }
 
+  /**
+   * Devolve os vizinhos diretamente alcancaveis a partir de uma entidade.
+   *
+   * @param entityId identificador da entidade origem
+   * @return lista de entidades vizinhas
+   */
   public List<Entity> getNeighbors(String entityId) {
     List<Entity> result = new ArrayList<>();
     for (DirectedEdge e : getOutEdges(entityId)) {
@@ -166,6 +266,11 @@ public class StreamingGraph {
     return result;
   }
 
+  /**
+   * Devolve uma copia das interacoes registadas.
+   *
+   * @return lista de interacoes
+   */
   public List<Interaction> getInteractions() {
     return new ArrayList<>(interactions);
   }
@@ -191,14 +296,29 @@ public class StreamingGraph {
     return result;
   }
 
+  /**
+   * Devolve todos os identificadores de vertices registados.
+   *
+   * @return lista de identificadores
+   */
   public List<String> getAllVertexIds() {
     return new ArrayList<>(nodeIndex.keySet());
   }
 
+  /**
+   * Devolve o grafo pesado direcionado interno.
+   *
+   * @return grafo interno
+   */
   public EdgeWeightedDigraph getGraph() {
     return graph;
   }
 
+  /**
+   * Reconstrui o grafo interno com uma nova capacidade.
+   *
+   * @param newCapacity nova capacidade do grafo
+   */
   private void rebuild(int newCapacity) {
     this.capacity = newCapacity;
 
@@ -240,6 +360,11 @@ public class StreamingGraph {
     }
   }
 
+  /**
+   * Devolve uma representacao textual do grafo, incluindo vertices e arestas.
+   *
+   * @return texto descritivo do grafo
+   */
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();

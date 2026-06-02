@@ -6,6 +6,9 @@ import java.time.Period; // Importa a classe que calcula intervalos de tempo ent
 import java.util.ArrayList; // Importa a classe que cria listas dinamicas que crescem conforme necessario
 import java.util.List; // Importa a interface que define o comportamento de uma lista ordenada de elementos
 
+/**
+ * Representa um artista da plataforma, incluindo dados pessoais e papeis desempenhados.
+ */
 /*
  * DICIONARIO:
  * - class: modelo que define a estrutura e comportamento de um objeto
@@ -21,13 +24,34 @@ import java.util.List; // Importa a interface que define o comportamento de uma 
  */
 public class Artist extends Entity { // Define a classe Artist que herda de Entity, representando um artista da plataforma
 
+    /** Nome do artista. */
     private String name; // Guarda o nome do artista
+
+    /** Nacionalidade do artista. */
     private String nationality; // Guarda a nacionalidade do artista (ex: PT, US, BR)
+
+    /** Data de nascimento do artista. */
     private LocalDate birthDate; // Guarda a data de nascimento do artista
+
+    /** Genero do artista em texto livre. */
     private String gender; // Guarda o genero do artista em texto livre
+
+    /** Lista de papeis desempenhados pelo artista. */
     private List<ArtistRole> artistRoles; // Lista com os papeis que o artista desempenha (pode ter varios ao mesmo tempo)
+
+    /** Lista de filmes em que o artista participou. */
     private List<Movie> movies; // Lista de filmes em que o artista participou
 
+    /**
+     * Cria um artista com os seus dados basicos.
+     *
+     * @param id identificador unico do artista
+     * @param createdAt data e hora de criacao
+     * @param name nome do artista
+     * @param nationality nacionalidade do artista
+     * @param birthDate data de nascimento
+     * @param gender genero do artista
+     */
     /*
      * DICIONARIO:
      * - construtor: metodo especial que inicializa um novo objeto quando e criado
@@ -45,6 +69,11 @@ public class Artist extends Entity { // Define a classe Artist que herda de Enti
         this.movies = new ArrayList<>(); // Inicializa a lista de filmes como uma lista vazia
     } // Fim do construtor
 
+    /**
+     * Devolve o nome do artista.
+     *
+     * @return nome do artista
+     */
     /*
      * DICIONARIO:
      * - getter: metodo que devolve o valor de um atributo privado
@@ -54,18 +83,38 @@ public class Artist extends Entity { // Define a classe Artist que herda de Enti
         return name; // Devolve o valor do atributo name
     } // Fim do metodo getName
 
+    /**
+     * Devolve a nacionalidade do artista.
+     *
+     * @return nacionalidade do artista
+     */
     public String getNationality() { // Metodo getter que devolve a nacionalidade do artista
         return nationality; // Devolve o valor do atributo nationality
     } // Fim do metodo getNationality
 
+    /**
+     * Devolve a data de nascimento do artista.
+     *
+     * @return data de nascimento
+     */
     public LocalDate getBirthDate() { // Metodo getter que devolve a data de nascimento do artista
         return birthDate; // Devolve o valor do atributo birthDate
     } // Fim do metodo getBirthDate
 
+    /**
+     * Devolve o genero do artista.
+     *
+     * @return genero do artista
+     */
     public String getGender() { // Metodo getter que devolve o genero do artista
         return gender; // Devolve o valor do atributo gender
     } // Fim do metodo getGender
 
+    /**
+     * Calcula e devolve a idade atual do artista em anos.
+     *
+     * @return idade em anos, ou {@code 0} se a data de nascimento for desconhecida
+     */
     /*
      * DICIONARIO:
      * - Period: classe que representa um periodo de tempo (diferenca entre duas datas)
@@ -81,14 +130,29 @@ public class Artist extends Entity { // Define a classe Artist que herda de Enti
         return 0; // Se a data de nascimento for null, devolve 0 porque nao e possivel calcular
     } // Fim do metodo getAge
 
+    /**
+     * Devolve a lista de papeis do artista.
+     *
+     * @return papeis do artista
+     */
     public List<ArtistRole> getArtistRoles() { // Metodo getter que devolve a lista de papeis do artista
         return artistRoles; // Devolve a lista de papeis
     } // Fim do metodo getArtistRoles
 
+    /**
+     * Devolve a lista de filmes associados ao artista.
+     *
+     * @return filmes associados ao artista
+     */
     public List<Movie> getMovies() { // Metodo getter que devolve a lista de filmes do artista
         return movies; // Devolve a lista de filmes
     } // Fim do metodo getMovies
 
+    /**
+     * Devolve uma representacao textual do artista.
+     *
+     * @return texto com o nome do artista
+     */
     /*
      * DICIONARIO:
      * - Override: anotacao que indica que estamos a redefinir um metodo herdado

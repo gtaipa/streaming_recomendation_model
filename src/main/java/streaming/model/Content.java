@@ -3,6 +3,9 @@ package streaming.model; // Declara que esta classe pertence ao pacote streaming
 import java.time.LocalDateTime; // Importa a classe LocalDateTime para trabalhar com datas e horas
 import java.util.List; // Importa a interface List para usar listas de objetos
 
+/**
+ * Classe abstrata que define os campos e comportamentos comuns a todos os conteudos.
+ */
 /*
  * DICIONARIO:
  * - abstract: classe que nao pode ser instanciada diretamente, serve apenas como modelo para outras classes
@@ -19,20 +22,40 @@ import java.util.List; // Importa a interface List para usar listas de objetos
  */
 public abstract class Content extends Entity { // Define a classe abstrata Content que herda de Entity
 
+  /** Titulo do conteudo. */
   private String title; // Campo privado que guarda o titulo do conteudo
 
+  /** Ano de lancamento do conteudo. */
   private int releaseYear; // Campo privado que guarda o ano de lancamento do conteudo
 
+  /** Genero associado ao conteudo. */
   private Genre genre; // Campo privado que guarda o genero do conteudo
 
+  /** Regiao associada ao conteudo. */
   private String region; // Campo privado que guarda a regiao associada ao conteudo
 
+  /** Classificacao media do conteudo, numa escala de 0 a 10. */
   private double avgRating; // Campo privado que guarda a classificacao media de 0 a 10
 
+  /** Numero total de visualizacoes do conteudo. */
   private int totalViews; // Campo privado que guarda o numero total de visualizacoes
 
+  /** Lista de artistas associados ao conteudo. */
   private List<Artist> artists; // Campo privado que guarda a lista de artistas associados ao conteudo
 
+  /**
+   * Cria um conteudo com os dados comuns a filmes, series e documentarios.
+   *
+   * @param id identificador unico do conteudo
+   * @param createdAt data e hora de criacao
+   * @param title titulo do conteudo
+   * @param releaseYear ano de lancamento
+   * @param genre genero do conteudo
+   * @param region regiao associada ao conteudo
+   * @param avgRating classificacao media
+   * @param totalViews numero total de visualizacoes
+   * @param artists artistas associados ao conteudo
+   */
   /*
    * DICIONARIO:
    * - protected: modificador de acesso que permite acesso apenas pela propria classe e pelas subclasses
@@ -52,6 +75,11 @@ public abstract class Content extends Entity { // Define a classe abstrata Conte
     this.artists = artists; // Atribui a lista de artistas recebida ao campo da classe
   } // Fim do construtor de Content
 
+  /**
+   * Devolve o titulo do conteudo.
+   *
+   * @return titulo do conteudo
+   */
   /*
    * DICIONARIO:
    * - public: modificador de acesso que permite acesso de qualquer classe
@@ -62,6 +90,11 @@ public abstract class Content extends Entity { // Define a classe abstrata Conte
     return title; // Devolve o valor do campo title
   } // Fim do metodo getTitle
 
+  /**
+   * Devolve o ano de lancamento do conteudo.
+   *
+   * @return ano de lancamento
+   */
   /*
    * DICIONARIO:
    * - int: tipo de dados que representa um numero inteiro
@@ -71,6 +104,11 @@ public abstract class Content extends Entity { // Define a classe abstrata Conte
     return releaseYear; // Devolve o valor do campo releaseYear
   } // Fim do metodo getReleaseYear
 
+  /**
+   * Devolve o genero do conteudo.
+   *
+   * @return genero do conteudo
+   */
   /*
    * DICIONARIO:
    * - Genre: tipo que representa o genero do conteudo como acao, terror, comedia, etc
@@ -80,6 +118,11 @@ public abstract class Content extends Entity { // Define a classe abstrata Conte
     return genre; // Devolve o valor do campo genre
   } // Fim do metodo getGenre
 
+  /**
+   * Devolve a regiao do conteudo.
+   *
+   * @return regiao associada ao conteudo
+   */
   /*
    * DICIONARIO:
    * - String: tipo de dados que representa texto
@@ -89,6 +132,11 @@ public abstract class Content extends Entity { // Define a classe abstrata Conte
     return region; // Devolve o valor do campo region
   } // Fim do metodo getRegion
 
+  /**
+   * Devolve a classificacao media do conteudo.
+   *
+   * @return classificacao media
+   */
   /*
    * DICIONARIO:
    * - double: tipo de dados decimal com precisao dupla
@@ -98,6 +146,11 @@ public abstract class Content extends Entity { // Define a classe abstrata Conte
     return avgRating; // Devolve o valor do campo avgRating
   } // Fim do metodo getAvgRating
 
+  /**
+   * Devolve o total de visualizacoes do conteudo.
+   *
+   * @return total de visualizacoes
+   */
   /*
    * DICIONARIO:
    * - int: tipo de dados que representa um numero inteiro
@@ -107,6 +160,11 @@ public abstract class Content extends Entity { // Define a classe abstrata Conte
     return totalViews; // Devolve o valor do campo totalViews
   } // Fim do metodo getTotalViews
 
+  /**
+   * Devolve a lista de artistas associados ao conteudo.
+   *
+   * @return artistas associados
+   */
   /*
    * DICIONARIO:
    * - List: colecao ordenada de elementos que permite duplicados
@@ -117,6 +175,11 @@ public abstract class Content extends Entity { // Define a classe abstrata Conte
     return artists; // Devolve o valor do campo artists
   } // Fim do metodo getArtists
 
+  /**
+   * Devolve detalhes especificos do tipo concreto de conteudo.
+   *
+   * @return descricao com detalhes especificos
+   */
   /*
    * DICIONARIO:
    * - abstract: metodo sem corpo que obriga as subclasses a implementarem a sua propria versao
@@ -127,6 +190,11 @@ public abstract class Content extends Entity { // Define a classe abstrata Conte
 
   ); // Fim da declaracao do metodo abstrato getDetails
 
+  /**
+   * Devolve o tipo concreto de conteudo.
+   *
+   * @return tipo de conteudo
+   */
   /*
    * DICIONARIO:
    * - abstract: metodo sem corpo que obriga as subclasses a implementarem a sua propria versao

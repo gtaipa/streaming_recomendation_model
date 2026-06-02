@@ -1,5 +1,8 @@
 package streaming.model; // Declara que este ficheiro pertence ao pacote streaming.model
 
+/**
+ * Gera identificadores sequenciais para utilizadores, conteudos, artistas e generos.
+ */
 /*
  * DICIONARIO:
  * - class: modelo que define a estrutura e comportamento de um objeto
@@ -12,11 +15,18 @@ package streaming.model; // Declara que este ficheiro pertence ao pacote streami
  */
 public class IdGenerator { // Define a classe IdGenerator que gera IDs unicos e sequenciais para diferentes tipos de entidades
 
+    /** Proximo numero a usar em IDs de utilizadores. */
     private int userCount; // Contador que guarda o proximo numero a usar para IDs de utilizadores
+    /** Proximo numero a usar em IDs de conteudos. */
     private int contentCount; // Contador que guarda o proximo numero a usar para IDs de conteudos
+    /** Proximo numero a usar em IDs de artistas. */
     private int artistCount; // Contador que guarda o proximo numero a usar para IDs de artistas
+    /** Proximo numero a usar em IDs de generos. */
     private int genreCount; // Contador que guarda o proximo numero a usar para IDs de generos
 
+    /**
+     * Inicializa todos os contadores no valor inicial.
+     */
     /*
      * DICIONARIO:
      * - construtor: metodo especial que inicializa o objeto quando e criado
@@ -29,6 +39,11 @@ public class IdGenerator { // Define a classe IdGenerator que gera IDs unicos e 
         this.genreCount = 1; // Comeca o contador de generos no numero 1
     } // Fim do construtor
 
+    /**
+     * Gera o proximo identificador de utilizador.
+     *
+     * @return identificador no formato {@code USER-0001}
+     */
     /*
      * DICIONARIO:
      * - String.format: cria uma string formatada a partir de um modelo e valores
@@ -39,6 +54,11 @@ public class IdGenerator { // Define a classe IdGenerator que gera IDs unicos e 
         return String.format("USER-%04d", userCount++); // Cria o ID no formato "USER-XXXX" e avanca o contador para o proximo
     } // Fim do metodo nextUserId
 
+    /**
+     * Gera o proximo identificador de conteudo.
+     *
+     * @return identificador no formato {@code CONT-0001}
+     */
     /*
      * DICIONARIO:
      * - "CONT-%04d": modelo que gera texto como "CONT-0001", "CONT-0002", etc.
@@ -47,6 +67,11 @@ public class IdGenerator { // Define a classe IdGenerator que gera IDs unicos e 
         return String.format("CONT-%04d", contentCount++); // Cria o ID no formato "CONT-XXXX" e avanca o contador
     } // Fim do metodo nextContentId
 
+    /**
+     * Gera o proximo identificador de artista.
+     *
+     * @return identificador no formato {@code ARTIST-0001}
+     */
     /*
      * DICIONARIO:
      * - "ARTIST-%04d": modelo que gera texto como "ARTIST-0001", "ARTIST-0002", etc.
@@ -55,6 +80,11 @@ public class IdGenerator { // Define a classe IdGenerator que gera IDs unicos e 
         return String.format("ARTIST-%04d", artistCount++); // Cria o ID no formato "ARTIST-XXXX" e avanca o contador
     } // Fim do metodo nextArtistId
 
+    /**
+     * Gera o proximo identificador de genero.
+     *
+     * @return identificador no formato {@code GENRE-0001}
+     */
     /*
      * DICIONARIO:
      * - "GENRE-%04d": modelo que gera texto como "GENRE-0001", "GENRE-0002", etc.
@@ -63,6 +93,9 @@ public class IdGenerator { // Define a classe IdGenerator que gera IDs unicos e 
         return String.format("GENRE-%04d", genreCount++); // Cria o ID no formato "GENRE-XXXX" e avanca o contador
     } // Fim do metodo nextGenreId
 
+    /**
+     * Repoe todos os contadores ao valor inicial.
+     */
     /*
      * DICIONARIO:
      * - reset: repor todos os contadores ao valor inicial, util para testes

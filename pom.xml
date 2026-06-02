@@ -65,6 +65,14 @@
                     <docencoding>${project.build.sourceEncoding}</docencoding>
                     <charset>${project.build.sourceEncoding}</charset>
                     <source>${maven.compiler.release}</source>
+                    <show>private</show>
+                    <tags>
+                        <tag>
+                            <name>brief</name>
+                            <placement>a</placement>
+                            <head>Brief:</head>
+                        </tag>
+                    </tags>
                     <failOnError>true</failOnError>
                 </configuration>
             </plugin>

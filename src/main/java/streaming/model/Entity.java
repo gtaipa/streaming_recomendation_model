@@ -3,6 +3,9 @@ package streaming.model; // Declara que esta classe pertence ao pacote streaming
 import java.time.LocalDateTime; // Importa a classe que representa data e hora juntas (ano, mes, dia, hora, minuto, segundo)
 import java.util.Objects; // Importa metodos utilitarios para comparar objetos de forma segura e gerar hash codes
 
+/**
+ * Classe base abstrata para todas as entidades identificaveis do sistema.
+ */
 /*
  * DICIONARIO:
  * - abstract: palavra-chave que impede criar objetos desta classe diretamente; serve apenas como base para outras
@@ -14,9 +17,18 @@ import java.util.Objects; // Importa metodos utilitarios para comparar objetos d
  */
 public abstract class Entity { // Define a classe abstrata Entity, que e a classe base de todas as entidades do sistema
 
+    /** Identificador unico da entidade. */
     protected String id; // Atributo que guarda o identificador unico da entidade (visivel pelas subclasses)
+
+    /** Data e hora em que esta entidade foi criada. */
     protected LocalDateTime createdAt; // Atributo que guarda a data e hora em que esta entidade foi criada
 
+    /**
+     * Cria uma entidade com identificador e data de criacao.
+     *
+     * @param id identificador unico da entidade
+     * @param createdAt data e hora de criacao da entidade
+     */
     /*
      * DICIONARIO:
      * - construtor: metodo especial que e chamado quando se cria um novo objeto; inicializa os atributos
@@ -28,6 +40,11 @@ public abstract class Entity { // Define a classe abstrata Entity, que e a class
         this.createdAt = createdAt; // Guarda a data de criacao recebida como parametro no atributo createdAt deste objeto
     } // Fim do construtor
 
+    /**
+     * Devolve o identificador unico desta entidade.
+     *
+     * @return identificador unico
+     */
     /*
      * DICIONARIO:
      * - getter: metodo que devolve o valor de um atributo privado ou protegido
@@ -38,6 +55,11 @@ public abstract class Entity { // Define a classe abstrata Entity, que e a class
         return id; // Devolve o valor do atributo id
     } // Fim do metodo getId
 
+    /**
+     * Devolve a data e hora de criacao desta entidade.
+     *
+     * @return data e hora de criacao
+     */
     /*
      * DICIONARIO:
      * - LocalDateTime: tipo que combina data e hora num so objeto (ex: 2025-03-15T14:30:00)
@@ -46,6 +68,12 @@ public abstract class Entity { // Define a classe abstrata Entity, que e a class
         return createdAt; // Devolve o valor do atributo createdAt
     } // Fim do metodo getCreatedAt
 
+    /**
+     * Compara esta entidade com outro objeto usando o identificador.
+     *
+     * @param o objeto a comparar
+     * @return {@code true} se os identificadores forem iguais
+     */
     /*
      * DICIONARIO:
      * - Override: anotacao que indica que estamos a substituir um metodo herdado da classe pai (Object)
@@ -61,6 +89,11 @@ public abstract class Entity { // Define a classe abstrata Entity, que e a class
         return Objects.equals(this.id, other.id); // Compara os ids das duas entidades; se forem iguais, as entidades sao consideradas iguais
     } // Fim do metodo equals
 
+    /**
+     * Calcula o codigo hash desta entidade com base no identificador.
+     *
+     * @return codigo hash da entidade
+     */
     /*
      * DICIONARIO:
      * - hashCode: metodo que gera um numero inteiro a partir do objeto, usado para organizar objetos em estruturas rapidas como HashMap

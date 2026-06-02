@@ -22,7 +22,9 @@ import java.util.*;
  *   g) Seguidores que viram o mesmo filme num intervalo
  */
 public class GraphAlgorithms {
+    /** Grafo com entidades e relacoes usado pelos algoritmos. */
     private final StreamingGraph graph;
+    /** Base de dados com as entidades da plataforma. */
     private final StreamingDB db;
 
     /** @param graph grafo com entidades e relações (R7)
@@ -37,11 +39,25 @@ public class GraphAlgorithms {
     // ========================= R8a) CAMINHOS MAIS CURTOS =========================
 
     /** R8a) Caminho mais curto entre dois vértices (Dijkstra). */
+    /**
+     * Calcula o caminho mais curto entre duas entidades.
+     *
+     * @param fromId identificador da entidade origem
+     * @param toId identificador da entidade destino
+     * @return lista de entidades no caminho mais curto
+     */
     public List<Entity> shortestPath(String fromId, String toId) {
         return dijkstraPath(graph.getGraph(), fromId, toId);
     }
 
     /** R8a) Custo do caminho mais curto. */
+    /**
+     * Calcula o custo do caminho mais curto entre duas entidades.
+     *
+     * @param fromId identificador da entidade origem
+     * @param toId identificador da entidade destino
+     * @return distancia do caminho mais curto ou infinito se nao houver caminho
+     */
     public double shortestPathDistance(String fromId, String toId) {
         if (!graph.containsVertex(fromId) || !graph.containsVertex(toId))
             return Double.POSITIVE_INFINITY;
@@ -50,16 +66,38 @@ public class GraphAlgorithms {
     }
 
     /** R8a) Caminho mais curto apenas por arestas WATCH. */
+    /**
+     * Calcula o caminho mais curto usando apenas interacoes WATCH.
+     *
+     * @param fromId identificador da entidade origem
+     * @param toId identificador da entidade destino
+     * @return lista de entidades no caminho filtrado
+     */
     public List<Entity> shortestPathByWatch(String fromId, String toId) {
         return shortestPathByType(fromId, toId, InteractionType.WATCH);
     }
 
     /** R8a) Caminho mais curto apenas por arestas FOLLOW. */
+    /**
+     * Calcula o caminho mais curto usando apenas interacoes FOLLOW.
+     *
+     * @param fromId identificador da entidade origem
+     * @param toId identificador da entidade destino
+     * @return lista de entidades no caminho filtrado
+     */
     public List<Entity> shortestPathByFollow(String fromId, String toId) {
         return shortestPathByType(fromId, toId, InteractionType.FOLLOW);
     }
 
     /** Constrói subgrafo temporário com arestas de um tipo e corre Dijkstra. */
+    /**
+     * Constroi um subgrafo temporario com arestas de um tipo e executa Dijkstra.
+     *
+     * @param fromId identificador da entidade origem
+     * @param toId identificador da entidade destino
+     * @param type tipo de interacao usado no filtro
+     * @return lista de entidades no caminho filtrado
+     */
     private List<Entity> shortestPathByType(String fromId, String toId, InteractionType type) {
         if (!graph.containsVertex(fromId) || !graph.containsVertex(toId))
             return new ArrayList<>();
@@ -75,6 +113,14 @@ public class GraphAlgorithms {
     }
 
     /** Helper: corre Dijkstra num grafo e devolve o caminho como lista de Entity. */
+    /**
+     * Executa Dijkstra num grafo e devolve o caminho como lista de entidades.
+     *
+     * @param g grafo onde o algoritmo e executado
+     * @param fromId identificador da entidade origem
+     * @param toId identificador da entidade destino
+     * @return lista de entidades no caminho
+     */
     private List<Entity> dijkstraPath(EdgeWeightedDigraph g, String fromId, String toId) {
         List<Entity> path = new ArrayList<>();
         if (!graph.containsVertex(fromId) || !graph.containsVertex(toId)) return path;
@@ -93,6 +139,12 @@ public class GraphAlgorithms {
     // ========================= R8b) SUBGRAFOS =========================
 
     /** R8b) Subgrafo com conteúdos de apenas um género. */
+    /**
+     * Extrai um subgrafo com conteudos de um genero.
+     *
+     * @param genreName nome do genero
+     * @return subgrafo filtrado por genero
+     */
     public StreamingGraph subgraphByGenre(String genreName) {
         StreamingGraph sub = new StreamingGraph();
         if (genreName == null) return sub;
@@ -109,6 +161,12 @@ public class GraphAlgorithms {
     }
 
     /** R8b) Subgrafo com conteúdos de uma região. */
+    /**
+     * Extrai um subgrafo com conteudos de uma regiao.
+     *
+     * @param region regiao a filtrar
+     * @return subgrafo filtrado por regiao
+     */
     public StreamingGraph subgraphByRegion(String region) {
         StreamingGraph sub = new StreamingGraph();
         if (region == null) return sub;
@@ -124,6 +182,12 @@ public class GraphAlgorithms {
     }
 
     /** R8b) Subgrafo com interações acima de um dado rating. */
+    /**
+     * Extrai um subgrafo com interacoes acima de um rating minimo.
+     *
+     * @param minRating rating minimo aceite
+     * @return subgrafo filtrado por rating minimo
+     */
     public StreamingGraph subgraphByMinRating(double minRating) {
         StreamingGraph sub = new StreamingGraph();
         for (Interaction i : graph.getInteractions()) {
@@ -138,6 +202,13 @@ public class GraphAlgorithms {
     }
 
     /** R8b) Caminho mais curto entre dois artistas via conteúdos partilhados. */
+    /**
+     * Calcula o caminho mais curto entre dois artistas.
+     *
+     * @param artistId1 identificador do primeiro artista
+     * @param artistId2 identificador do segundo artista
+     * @return lista de entidades no caminho entre artistas
+     */
     public List<Entity> shortestPathBetweenArtists(String artistId1, String artistId2) {
         return dijkstraPath(graph.getGraph(), artistId1, artistId2);
     }
@@ -145,11 +216,22 @@ public class GraphAlgorithms {
     // ========================= R8c) CONECTIVIDADE =========================
 
     /** R8c) Verifica se o grafo completo é fracamente conexo. */
+    /**
+     * Verifica se o grafo principal e fracamente conexo.
+     *
+     * @return {@code true} se o grafo for fracamente conexo
+     */
     public boolean isConnected() {
         return isConnected(graph);
     }
 
     /** R8c) Verifica se um subgrafo é fracamente conexo (BFS bidirecional). */
+    /**
+     * Verifica se um subgrafo e fracamente conexo.
+     *
+     * @param subgraph subgrafo a analisar
+     * @return {@code true} se o subgrafo for fracamente conexo
+     */
     public boolean isConnected(StreamingGraph subgraph) {
         if (subgraph.vertexCount() <= 1) return true;
         Map<Integer, Entity> entities = subgraph.getIndexToEntity();
@@ -173,6 +255,12 @@ public class GraphAlgorithms {
     // ========================= R8d) RECOMENDAÇÕES =========================
 
     /** R8d) Recomenda conteúdos via o que os seguidos viram (e o user ainda não). */
+    /**
+     * Recomenda conteudos com base no que os utilizadores seguidos viram.
+     *
+     * @param userId identificador do utilizador
+     * @return lista de conteudos recomendados
+     */
     public List<Content> recommend(String userId) {
         List<Content> recommendations = new ArrayList<>();
         if (userId == null || !graph.containsVertex(userId)) return recommendations;
@@ -206,6 +294,14 @@ public class GraphAlgorithms {
     // ========================= R8e) ESTATÍSTICAS =========================
 
     /** R8e) Estatísticas de visualização de um conteúdo entre duas datas. */
+    /**
+     * Calcula estatisticas de visualizacao de um conteudo entre duas datas.
+     *
+     * @param contentId identificador do conteudo
+     * @param start inicio do intervalo, ou {@code null}
+     * @param end fim do intervalo, ou {@code null}
+     * @return mapa com total de visualizacoes, rating medio e percentagem media vista
+     */
     public Map<String, Double> getViewStats(String contentId, LocalDateTime start, LocalDateTime end) {
         return computeStats(i ->
                 contentId != null
@@ -215,6 +311,14 @@ public class GraphAlgorithms {
     }
 
     /** R8e) Estatísticas de visualização filtradas por género e datas. */
+    /**
+     * Calcula estatisticas de visualizacao filtradas por genero e datas.
+     *
+     * @param genreName nome do genero
+     * @param start inicio do intervalo, ou {@code null}
+     * @param end fim do intervalo, ou {@code null}
+     * @return mapa com estatisticas agregadas
+     */
     public Map<String, Double> getViewStatsByGenre(String genreName, LocalDateTime start, LocalDateTime end) {
         return computeStats(i ->
                 genreName != null
@@ -226,6 +330,12 @@ public class GraphAlgorithms {
     }
 
     /** Helper: calcula stats (totalViews, avgRating, avgWatchedPct) para interações filtradas. */
+    /**
+     * Calcula estatisticas para interacoes filtradas.
+     *
+     * @param filter predicado usado para selecionar interacoes
+     * @return mapa com totalViews, avgRating e avgWatchedPct
+     */
     private Map<String, Double> computeStats(java.util.function.Predicate<Interaction> filter) {
         double total = 0, sumRating = 0, sumWatched = 0;
         for (Interaction i : graph.getInteractions()) {
@@ -245,6 +355,14 @@ public class GraphAlgorithms {
     // ========================= R8f) SÉRIES POR GÉNERO/PERÍODO =========================
 
     /** R8f) Utilizadores que viram séries de um género num período. */
+    /**
+     * Devolve utilizadores que viram series de um genero num periodo.
+     *
+     * @param genreName nome do genero
+     * @param start inicio do periodo, ou {@code null}
+     * @param end fim do periodo, ou {@code null}
+     * @return lista de utilizadores encontrados
+     */
     public List<User> usersWhoWatchedSeriesByGenre(String genreName, LocalDateTime start, LocalDateTime end) {
         Set<String> seen = new HashSet<>();
         List<User> result = new ArrayList<>();
@@ -262,6 +380,15 @@ public class GraphAlgorithms {
     // ========================= R8g) SEGUIDORES MESMO FILME =========================
 
     /** R8g) Seguidores de um user que viram o mesmo conteúdo num intervalo. */
+    /**
+     * Devolve seguidores de um utilizador que viram o mesmo conteudo num intervalo.
+     *
+     * @param userId identificador do utilizador seguido
+     * @param contentId identificador do conteudo
+     * @param start inicio do intervalo, ou {@code null}
+     * @param end fim do intervalo, ou {@code null}
+     * @return lista de seguidores que viram o conteudo
+     */
     public List<User> followersWhoWatchedSameContent(String userId, String contentId,
                                                      LocalDateTime start, LocalDateTime end) {
         List<User> result = new ArrayList<>();
@@ -293,6 +420,14 @@ public class GraphAlgorithms {
     // ========================= HELPER =========================
 
     /** Verifica se um timestamp está dentro do intervalo [start, end]. Nulls são ignorados. */
+    /**
+     * Verifica se um timestamp esta dentro do intervalo indicado.
+     *
+     * @param ts timestamp a verificar
+     * @param start inicio do intervalo, ou {@code null}
+     * @param end fim do intervalo, ou {@code null}
+     * @return {@code true} se o timestamp estiver dentro do intervalo
+     */
     private boolean inRange(LocalDateTime ts, LocalDateTime start, LocalDateTime end) {
         if (start != null && ts.isBefore(start)) return false;
         if (end != null && ts.isAfter(end)) return false;
