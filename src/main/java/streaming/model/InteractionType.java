@@ -1,23 +1,29 @@
-package streaming.model; // Declara que este ficheiro pertence ao pacote streaming.model
+package streaming.model; // Definição do pacote pertencente à camada de modelo do sistema.
 
 /**
- * Enumera os tipos de interacao que um utilizador pode realizar.
+ * Tipologia de interações suportadas pelo sistema de recomendação.
+ * <p>
+ * Define as categorias de ações que um utilizador pode executar, influenciando o cálculo de afinidade.
  */
+public enum InteractionType { // Tipo enumerado que encapsula a taxonomia das ações de utilizador.
+
+    /** O utilizador visualizou o conteúdo (consumo de media). */
+    WATCH, 
+
+    /** O utilizador atribuiu uma classificação explícita ao conteúdo. */
+    RATE, 
+
+    /** O utilizador demonstrou interesse preliminar através de um clique. */
+    CLICK, 
+
+    /** O utilizador estabeleceu uma ligação de seguimento social com outro utilizador. */
+    FOLLOW 
+
+}
+
 /*
- * DICIONARIO:
- * - enum: tipo especial de classe que define um conjunto fixo de valores possiveis
- * - InteractionType: nome deste enum; lista os tipos de interacao que um utilizador pode fazer na plataforma
- * - constante: valor que nao muda durante a execucao do programa
+ * DICIONÁRIO DE TERMOS TÉCNICOS
+ * - Enum (Tipo Enumerado): Estrutura de dados que permite definir um conjunto restrito de constantes nomeadas, garantindo segurança de tipos (type-safety).
+ * - Taxonomia: Sistema de classificação organizado de forma hierárquica ou categórica.
+ * - Afinidade: Métrica de proximidade ou interesse entre entidades (utilizador-conteúdo ou utilizador-utilizador).
  */
-public enum InteractionType { // Define o enum InteractionType com os tipos de acoes que um utilizador pode realizar
-
-    /** Visualizacao de um conteudo. */
-    WATCH, // O utilizador assistiu a um conteudo (deu play e viu)
-    /** Classificacao atribuida a um conteudo. */
-    RATE, // O utilizador avaliou um conteudo (deu uma nota ou classificacao)
-    /** Clique ou demonstracao de interesse num conteudo. */
-    CLICK, // O utilizador clicou num conteudo (demonstrou interesse ao clicar)
-    /** Relacao social em que um utilizador segue outro. */
-    FOLLOW // O utilizador passou a seguir outro utilizador (relacao social entre pessoas)
-
-} // Fim do enum InteractionType
