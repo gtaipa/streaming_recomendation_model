@@ -1,7 +1,6 @@
 package streaming.db; // Declara que esta classe pertence ao pacote streaming.db
 
 import edu.princeton.cs.algs4.DirectedEdge; // Importa a classe que representa uma aresta direcionada com peso
-import edu.princeton.cs.algs4.DijkstraSP; // Importa o algoritmo de Dijkstra para caminhos mais curtos
 
 import streaming.model.Artist; // Importa a classe que representa um artista da plataforma
 import streaming.model.Content; // Importa a classe abstrata base para todos os tipos de conteudo
